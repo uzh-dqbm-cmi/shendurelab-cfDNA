@@ -65,5 +65,24 @@ rule fft:
         cd $cwd/{params.in_dir} && rm -f block_*.tsv.gz;
     """
 
-rule all:
+rule fft_summaries:
     input: rules.fft.output
+    output:
+        "{path}/fft_summaries/fft_{name}_WPS.tsv.gz",
+        "{path}/fft_summaries/fft_{name}_cov.tsv.gz",
+        "{path}/fft_summaries/fft_{name}_starts.tsv.gz"
+    params:
+        in_dir="{path}/fft/{name}",
+        out_dir="{path}/fft_summaries",
+        anno="expression/transcriptAnno-GRCh37.75.mini.tsv"
+    shell: """
+        cwd=$(pwd);
+        cd {params.in_dir} && tar xf blocks.tar;
+        cd $cwd && ./expression/convert_files.py \
+            -a {params.anno} \
+            -t {wildcards.path} \
+            -r {wildcards.path} \
+            -p . \
+            -i {wildcards.name};
+        cd $cwd/{params.in_dir} && rm -f block_*.tsv.gz;
+    """
