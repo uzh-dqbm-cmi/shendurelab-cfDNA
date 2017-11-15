@@ -40,18 +40,30 @@ rule wps:
     input:
         bam="{path}/alignments/{name}.bam",
         bai="{path}/alignments/{name}.bam.bai",
-        anno="expression/transcriptAnno-GRCh37.75.body.tsv"
+        anno="expression/transcriptAnno-GRCh37.75.mini.tsv"
+    output: "{path}/wps/{name}/blocks.tar"
     params: out_dir="{path}/wps/{name}"
-    output: dynamic("{path}/wps/{name}/block_{id}.tsv.gz")
     shell: """
         ./expression/extractReadStartsFromBAM_Region_WPS.py \
             --minInsert=120 --maxInsert=180 \
             -i {input.anno} \
             -o '{params.out_dir}/block_%s.tsv.gz' \
-            {input.bam}
+            {input.bam};
+        cd {params.out_dir} && tar cf blocks.tar block_*.tsv.gz && rm -f block_*.tsv.gz;
+    """
+
+rule fft:
+    input: "{path}/wps/{name}/blocks.tar"
+    output: "{path}/fft/{name}/blocks.tar"
+    params: in_dir="{path}/wps/{name}", out_dir="{path}/fft/{name}"
+    shell: """
+        cwd=$(pwd);
+        cd {params.in_dir} && tar xf blocks.tar;
+        cd $cwd && (cd {params.in_dir}; \ls block_*.tsv.gz) | xargs -n 500 \
+            Rscript ./expression/fft_path.R {params.in_dir} {params.out_dir};
+        cd $cwd/{params.out_dir} && tar cf blocks.tar block_*.tsv.gz && rm -f block_*.tsv.gz;
+        cd $cwd/{params.in_dir} && rm -f block_*.tsv.gz;
     """
 
 rule all:
-    input: rules.wps.output
-    output: "{path}/{name}.plc"
-    shell: "touch {output}"
+    input: rules.fft.output
