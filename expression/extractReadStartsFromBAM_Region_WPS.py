@@ -72,45 +72,32 @@ if os.path.exists(options.input):
         for bamfile in args:
             if options.verbose: sys.stderr.write("Reading %s\n"%bamfile)
             bamfile = bamfile.strip("""\'""")
-            if os.path.exists(bamfile) and (os.path.exists(bamfile.replace(".bam",".bai")) or os.path.exists(bamfile+".bai")):
-                input_file = pysam.Samfile( bamfile, "rb" )
-                prefix = ""
-                for tchrom in input_file.references:
-                    if tchrom.startswith("chr"): 
-                        prefix = "chr"
-                        break
-                for read in input_file.fetch(prefix+chrom,regionStart-protection-1,regionEnd+protection+1):
-                    if read.is_duplicate or read.is_qcfail or read.is_unmapped: continue
-                    if isSoftClipped(read.cigar):
+            if not os.path.exists(bamfile):
+                raise IOError("File not found: {}".format(bamfile))
+            if not (os.path.exists(bamfile.replace(".bam",".bai")) or os.path.exists(bamfile+".bai")):
+                raise IOError("Index for file {} not found".format(bamfile))
+            input_file = pysam.Samfile( bamfile, "rb" )
+            prefix = ""
+            for tchrom in input_file.references:
+                if tchrom.startswith("chr"): 
+                    prefix = "chr"
+                    break
+            for read in input_file.fetch(prefix+chrom,regionStart-protection-1,regionEnd+protection+1):
+                if read.is_duplicate or read.is_qcfail or read.is_unmapped: continue
+                if isSoftClipped(read.cigar):
+                    continue
+                if read.is_paired:
+                    if read.mate_is_unmapped:
                         continue
-                    if read.is_paired:
-                        if read.mate_is_unmapped:
+                    if read.rnext != read.tid:
+                        continue
+                    if read.is_read1 or (read.is_read2 and read.pnext+read.qlen < regionStart-protection-1):
+                        if read.isize == 0:
                             continue
-                        if read.rnext != read.tid:
-                            continue
-                        if read.is_read1 or (read.is_read2 and read.pnext+read.qlen < regionStart-protection-1):
-                            if read.isize == 0:
-                                continue
-                            if options.downsample != None and random.random() >= options.downsample:
-                                continue
-                            rstart = min(read.pos,read.pnext)+1 # 1-based
-                            lseq = abs(read.isize)
-                            rend = rstart+lseq-1 # end included
-                            if minInsSize != None and ((lseq < minInsSize) or (lseq > maxInsSize)):
-                                continue
-                            filteredReads.add_interval(Interval(rstart,rend))
-                            for i in range(rstart,rend+1):
-                                if i >= regionStart and i <= regionEnd:
-                                    posRange[i][0]+=1
-                            if rstart >= regionStart and rstart <= regionEnd:
-                                posRange[rstart][1]+=1
-                            if rend >= regionStart and rend <= regionEnd:
-                                posRange[rend][1]+=1
-                    else:
                         if options.downsample != None and random.random() >= options.downsample:
                             continue
-                        rstart = read.pos+1 # 1-based
-                        lseq = aln_length(read.cigar)
+                        rstart = min(read.pos,read.pnext)+1 # 1-based
+                        lseq = abs(read.isize)
                         rend = rstart+lseq-1 # end included
                         if minInsSize != None and ((lseq < minInsSize) or (lseq > maxInsSize)):
                             continue
@@ -118,17 +105,33 @@ if os.path.exists(options.input):
                         for i in range(rstart,rend+1):
                             if i >= regionStart and i <= regionEnd:
                                 posRange[i][0]+=1
-                        if ((options.merged or read.qname.startswith('M_')) or ((options.trimmed or read.qname.startswith('T_')) and read.qlen <= options.lengthSR-10)):
-                            if (rstart >= regionStart and rstart <= regionEnd):
-                                posRange[rstart][1]+=1
-                            if rend >= regionStart and rend <= regionEnd:
-                                posRange[rend][1]+=1
-                        elif read.is_reverse:
-                            if rend >= regionStart and rend <= regionEnd:
-                                posRange[rend][1]+=1
-                        else:
-                            if (rstart >= regionStart and rstart <= regionEnd):
-                                posRange[rstart][1]+=1
+                        if rstart >= regionStart and rstart <= regionEnd:
+                            posRange[rstart][1]+=1
+                        if rend >= regionStart and rend <= regionEnd:
+                            posRange[rend][1]+=1
+                else:
+                    if options.downsample != None and random.random() >= options.downsample:
+                        continue
+                    rstart = read.pos+1 # 1-based
+                    lseq = aln_length(read.cigar)
+                    rend = rstart+lseq-1 # end included
+                    if minInsSize != None and ((lseq < minInsSize) or (lseq > maxInsSize)):
+                        continue
+                    filteredReads.add_interval(Interval(rstart,rend))
+                    for i in range(rstart,rend+1):
+                        if i >= regionStart and i <= regionEnd:
+                            posRange[i][0]+=1
+                    if ((options.merged or read.qname.startswith('M_')) or ((options.trimmed or read.qname.startswith('T_')) and read.qlen <= options.lengthSR-10)):
+                        if (rstart >= regionStart and rstart <= regionEnd):
+                            posRange[rstart][1]+=1
+                        if rend >= regionStart and rend <= regionEnd:
+                            posRange[rend][1]+=1
+                    elif read.is_reverse:
+                        if rend >= regionStart and rend <= regionEnd:
+                            posRange[rend][1]+=1
+                    else:
+                        if (rstart >= regionStart and rstart <= regionEnd):
+                            posRange[rstart][1]+=1
          
         filename = options.outfile%cid
         outfile = gzip.open(filename,'wt')
