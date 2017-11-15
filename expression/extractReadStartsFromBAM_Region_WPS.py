@@ -62,7 +62,7 @@ options.outfile = options.outfile.strip("""\'""")
 
 protection = options.protection//2
 
-validChroms = set(map(str,range(1,23)+["X","Y"]))
+validChroms = set(map(str,list(range(1,23))+["X","Y"]))
 
 if os.path.exists(options.input):
   infile = open(options.input)
@@ -143,7 +143,7 @@ if os.path.exists(options.input):
                 posRange[rstart][1]+=1
 
     filename = options.outfile%cid
-    outfile = gzip.open(filename,'w')
+    outfile = gzip.open(filename,'wt')
     cov_sites = 0
     outLines = []
     for pos in range(regionStart,regionEnd+1):
