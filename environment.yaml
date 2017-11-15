@@ -1,0 +1,53 @@
+name: shendurelab-cfDNA-py3.6
+channels:
+- biocore
+- bioconda
+- conda-forge
+- defaults
+- r
+dependencies:
+- pysam=0.8.3=py36_2
+- samtools=0.1.18=0
+- blas=1.1=openblas
+- ca-certificates=2017.7.27.1=0
+- certifi=2017.7.27.1=py36_0
+- ncurses=5.9=10
+- numpy=1.13.3=py36_blas_openblas_200
+- openblas=0.2.19=2
+- openssl=1.0.2l=0
+- pip=9.0.1=py36_0
+- python=3.6.3=1
+- readline=6.2=0
+- setuptools=36.6.0=py36_1
+- sortedcontainers=1.5.7=py36_0
+- sqlite=3.13.0=1
+- tk=8.5.19=2
+- wheel=0.30.0=py_1
+- xz=5.2.3=0
+- zlib=1.2.11=0
+- libgcc=7.2.0=h69d50b8_2
+- libgcc-ng=7.2.0=h7cc24e2_2
+- libgfortran=3.0.0=1
+- libstdcxx-ng=7.2.0=h7a57d05_2
+- pip:
+  - appdirs==1.4.3
+  - bx==0.3.0
+  - chardet==3.0.4
+  - configargparse==0.12.0
+  - docopt==0.6.2
+  - idna==2.6
+  - jedi==0.11.0
+  - jsonschema==2.6.0
+  - nose==1.3.7
+  - parso==0.1.0
+  - prompt-toolkit==1.0.15
+  - ptpython==0.41
+  - pygments==2.2.0
+  - pyyaml==3.12
+  - ratelimiter==1.2.0
+  - requests==2.18.4
+  - six==1.11.0
+  - snakemake==4.3.0
+  - urllib3==1.22
+  - wcwidth==0.1.7
+  - wrapt==1.10.11
