@@ -79,7 +79,7 @@ def filter_reads(sam, chrom, region_start, region_end, protection, options):
     span_start = region_start - protection - 1
     span_end = region_end + protection + 1
     for read in sam.fetch(chrom, span_start, span_end):
-        if options.downsample and random() < options.downsample:
+        if (not options.downsample) or (random() < options.downsample):
             if not (read.is_duplicate or read.is_qcfail or read.is_unmapped):
                 if not is_soft_clipped(read.cigar):
                     yield read
