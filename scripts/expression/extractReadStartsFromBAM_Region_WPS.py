@@ -76,10 +76,10 @@ def get_chrom_prefix(references):
     else:
         return ""
 
-def filter_reads(sam, chrom, region_start, region_end, options):
+def filter_reads(bam_handle, chrom, region_start, region_end, options):
     span_start = region_start - options.prot_radius - 1
     span_end = region_end + options.prot_radius + 1
-    for read in sam.fetch(chrom, span_start, span_end):
+    for read in bam_handle.fetch(chrom, span_start, span_end):
         if (not options.downsample) or (random() < options.downsample):
             if not (read.is_duplicate or read.is_qcfail or read.is_unmapped):
                 if not is_soft_clipped(read.cigar):
@@ -168,20 +168,23 @@ def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, str
         wps_list.append([chrom, pos, cov_count, start_count, gcount - bcount])
     return wps_list, cov_sites
 
+def generate_region_file(bam_handles, region, options):
+    reads, pos_range = get_reads_and_ranges(bam_handles, *region, options)
+    wps_list, cov_sites = get_wps(reads, pos_range, *region, options)
+    if cov_sites or options.empty:
+        if region.strand == "-":
+            wps_list = reversed(wps_list)
+        with gzip.open(options.outfile%region.cid, "wt") as wps_handle:
+            for line in wps_list:
+                print(*line, sep="\t", file=wps_handle)
+
 if __name__ == "__main__":
     options, bamfiles = get_arguments()
     bam_handles = [Samfile(b, "rb") for b in bamfiles]
     log_action("Reading {}".format(options.input), options.verbose)
-    with open(options.input) as region_file:
-        for region in valid_regions(region_file):
-            reads, pos_range = get_reads_and_ranges(bam_handles, *region, options)
-            wps_list, cov_sites = get_wps(reads, pos_range, *region, options)
-            if cov_sites or options.empty:
-                if region.strand == "-":
-                    wps_list = reversed(wps_list)
-                with gzip.open(options.outfile%region.cid, "wt") as wps_handle:
-                    for line in wps_list:
-                        print(*line, sep="\t", file=wps_handle)
+    with open(options.input) as annotation_file:
+        for region in valid_regions(annotation_file):
+            generate_region_file(bam_handles, region, options)
     for bam_handle in bam_handles:
         if bam_handle._isOpen():
             log_action("Closing {}".format(bam_handle.filename))
