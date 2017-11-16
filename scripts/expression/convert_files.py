@@ -30,9 +30,9 @@ tempDir = options.temp
 project = options.project
 ind = options.individual
 
-outfileCov = gzip.open("%s/%s/fft_summaries%s/fft_%s_cov.tsv.gz"%(rootDir,project,options.suffix,ind),'wt')
-outfileStarts = gzip.open("%s/%s/fft_summaries%s/fft_%s_starts.tsv.gz"%(rootDir,project,options.suffix,ind),'wt')
-outfileWPS = gzip.open("%s/%s/fft_summaries%s/fft_%s_WPS.tsv.gz"%(rootDir,project,options.suffix,ind),'wt')
+outfileCov = gzip.open("data/fft_summaries/%s/fft_%s_cov.tsv.gz"%(options.suffix,ind),'wt')
+outfileStarts = gzip.open("data/fft_summaries/%s/fft_%s_starts.tsv.gz"%(options.suffix,ind),'wt')
+outfileWPS = gzip.open("data/fft_summaries/%s/fft_%s_WPS.tsv.gz"%(options.suffix,ind),'wt')
 
 geneIDs = set()
 if os.path.exists(options.annotation):
@@ -44,10 +44,10 @@ if os.path.exists(options.annotation):
 
 wrote_header = False
 for cid in sorted(geneIDs):
-  if os.path.exists("%s/%s/fft%s/%s/block_%s.tsv.gz"%(tempDir,project,options.suffix,ind,cid)):
+  if os.path.exists(tempDir + "/" + "%s_%s.tsv.gz"%(options.suffix,cid)):
     if not wrote_header:
       header = ['#Region']
-      infile = gzip.open("%s/%s/fft%s/%s/block_%s.tsv.gz"%(tempDir,project,options.suffix,ind,cid), "rt")
+      infile = gzip.open(tempDir + "/" + "%s_%s.tsv.gz"%(options.suffix,cid), "rt")
       infile.readline()
       for line in infile:
         fields = line.split()
@@ -57,7 +57,7 @@ for cid in sorted(geneIDs):
       outfileStarts.write("\t".join(header)+"\n")
       outfileWPS.write("\t".join(header)+"\n")
       wrote_header=True
-    infile = gzip.open("%s/%s/fft%s/%s/block_%s.tsv.gz"%(tempDir,project,options.suffix,ind,cid), "rt")
+    infile = gzip.open(tempDir + "/" + "%s_%s.tsv.gz"%(options.suffix,cid), "rt")
     covs = [cid]
     starts = [cid]
     wps = [cid]
