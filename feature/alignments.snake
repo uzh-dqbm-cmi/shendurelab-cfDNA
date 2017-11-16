@@ -1,0 +1,4 @@
+rule bam_index:
+    input: "{prefix}.bam"
+    output: "{prefix}.bam.bai"
+    shell: "samtools index {input} {output}"
