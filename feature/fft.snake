@@ -1,0 +1,61 @@
+rule wps:
+    """Calculate window protection scores within annotated regions"""
+    input:
+        bam="data/individuals/{subject}/{subject}.bam",
+        bai="data/individuals/{subject}/{subject}.bam.bai",
+        anno="data/annotations/transcriptAnno-{ref_id}.body.tsv"
+    output: "data/individuals/{subject}/wps/{ref_id,[^/]+}.tar"
+    params: out_dir="data/individuals/{subject}/wps"
+    shell: """
+        scripts/expression/extractReadStartsFromBAM_Region_WPS.py \
+            --minInsert=120 --maxInsert=180 \
+            -i {input.anno} \
+            -o '{params.out_dir}/{wildcards.ref_id}_%s.tsv.gz' \
+            {input.bam};
+        cd {params.out_dir} && \
+            tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \
+            rm -f {wildcards.ref_id}_*.tsv.gz;
+    """
+
+rule fft:
+    """Convert window protection scores"""
+    input: rules.wps.output
+    output: "data/individuals/{subject}/fft/{ref_id,[^/]+}.tar"
+    params:
+        in_dir="data/individuals/{subject}/wps",
+        out_dir="data/individuals/{subject}/fft"
+    shell: """
+        cwd=$(pwd);
+        cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
+        cd $cwd && (cd {params.in_dir}; \ls {wildcards.ref_id}_*.tsv.gz) | \
+            xargs -n 500 \
+            Rscript scripts/expression/fft_path.R \
+                {params.in_dir} {params.out_dir};
+        cd $cwd/{params.out_dir} && \
+            tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \
+            rm -f {wildcards.ref_id}_*.tsv.gz;
+        cd $cwd/{params.in_dir} && rm -f {wildcards.ref_id}_*.tsv.gz;
+    """
+
+rule fft_summaries:
+    """Calculate WPS, cov, starts for correlation analyses"""
+    input: rules.fft.output
+    output:
+        "data/fft_summaries/{ref_id}/fft_{subject}_WPS.tsv.gz",
+        "data/fft_summaries/{ref_id}/fft_{subject}_cov.tsv.gz",
+        "data/fft_summaries/{ref_id}/fft_{subject}_starts.tsv.gz"
+    params:
+        in_dir="data/individuals/{subject}/fft",
+        out_dir="data/fft_summaries",
+        anno="data/annotations/transcriptAnno-{ref_id}.body.tsv"
+    shell: """
+        cwd=$(pwd);
+        cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
+        cd $cwd && scripts/expression/convert_files.py \
+            -a {params.anno} \
+            -t {params.in_dir} \
+            -s {wildcards.ref_id} \
+            -p . \
+            -i {wildcards.subject};
+        cd $cwd/{params.in_dir} && rm -f {wildcards.ref_id}_*.tsv.gz;
+    """
