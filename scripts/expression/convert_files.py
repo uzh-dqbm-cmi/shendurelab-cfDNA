@@ -30,9 +30,9 @@ tempDir = options.temp
 project = options.project
 ind = options.individual
 
-outfileCov = gzip.open("data/fft_summaries/%s/fft_%s_cov.tsv.gz"%(ind,options.suffix),'wt')
-outfileStarts = gzip.open("data/fft_summaries/%s/fft_%s_starts.tsv.gz"%(ind,options.suffix),'wt')
-outfileWPS = gzip.open("data/fft_summaries/%s/fft_%s_WPS.tsv.gz"%(ind,options.suffix),'wt')
+outfileCov = gzip.open("data/fft_summaries/%s/fft_%s_cov.tsv.gz"%(options.suffix,ind),'wt')
+outfileStarts = gzip.open("data/fft_summaries/%s/fft_%s_starts.tsv.gz"%(options.suffix,ind),'wt')
+outfileWPS = gzip.open("data/fft_summaries/%s/fft_%s_WPS.tsv.gz"%(options.suffix,ind),'wt')
 
 geneIDs = set()
 if os.path.exists(options.annotation):
