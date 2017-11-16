@@ -8,7 +8,7 @@ rule wps:
     params: out_dir="data/individuals/{subject}/wps"
     shell: """
         scripts/expression/extractReadStartsFromBAM_Region_WPS.py \
-            --minInsert=120 --maxInsert=180 \
+            --min_ins_size=120 --max_ins_size=180 \
             -i {input.anno} \
             -o '{params.out_dir}/{wildcards.ref_id}_%s.tsv.gz' \
             {input.bam};
