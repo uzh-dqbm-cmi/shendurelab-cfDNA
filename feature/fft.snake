@@ -3,7 +3,7 @@ rule wps:
     input:
         bam="data/individuals/{subject}/{subject}.bam",
         bai="data/individuals/{subject}/{subject}.bam.bai",
-        anno="data/annotations/transcriptAnno-{ref_id}.tsv"
+        anno="data/annotations/transcriptAnno-{ref_id}.body.tsv"
     output: "data/individuals/{subject}/wps/{ref_id,[^/]+}.tar"
     params: out_dir="data/individuals/{subject}/wps"
     shell: """
@@ -47,7 +47,7 @@ rule fft_summaries:
     params:
         in_dir="data/individuals/{subject}/fft",
         out_dir="data/fft_summaries",
-        anno="data/annotations/transcriptAnno-{ref_id}.tsv"
+        anno="data/annotations/transcriptAnno-{ref_id}.body.tsv"
     shell: """
         cwd=$(pwd);
         cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
