@@ -1,24 +1,20 @@
 #!/usr/bin/env python
+"""Original author: Martin Kircher / mkircher@uw.edu / *03.06.2014"""
 
-"""
-
-:Author: Martin Kircher
-:Contact: mkircher@uw.edu
-:Date: *03.06.2014
-"""
-
-import sys, os
-from optparse import OptionParser
+from sys import stderr
+from os.path import exists
 import gzip
-import pysam
-import random
-
+from pysam import Samfile
+from random import random
+from optparse import OptionParser
 from collections import defaultdict
 from bx.intervals.intersection import Intersecter, Interval
 
+VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
+
 def is_soft_clipped(cigar):
     for op, count in cigar:
-        if op in [4,5,6]:
+        if op in [4, 5, 6]:
             return True
     return False
 
@@ -29,129 +25,158 @@ def aln_length(cigarlist):
             tlength += length
     return tlength
 
-parser = OptionParser()
-parser.add_option("-i","--input", help="Use regions transcript file (def transcriptAnno.tsv)",default="transcriptAnno.tsv")
-parser.add_option("-l","--length_sr", help="Length of full reads (default 76)",default=76,type="int")
-parser.add_option("-m","--merged", help="Assume reads are merged (default Off)",default=False,action="store_true")
-parser.add_option("-t","--trimmed", help="Assume reads are trimmed (default Off)",default=False,action="store_true")
-parser.add_option("-w","--protection", help="Base pair protection assumed for elements (default 120)",default=120,type="int")
-parser.add_option("-o","--outfile", help="Outfile prefix (def 'block_%s.tsv.gz')",default='block_%s.tsv.gz')
-parser.add_option("-e","--empty", help="Keep files of empty blocks (def Off)",default=False,action="store_true")
-parser.add_option("--min_ins_size", help="Minimum read length threshold to consider (def None)",default=-1,type="int")
-parser.add_option("--max_ins_size", help="Minimum read length threshold to consider (def None)",default=-1,type="int")
-parser.add_option("--max_length", help="Assumed maximum insert size (default 1000)",default=1000,type="int")
-parser.add_option("--downsample", help="Ratio to down sample reads (default OFF)",default=None,type="float")
-parser.add_option("-v","--verbose", help="Turn debug output on",default=False,action="store_true")
-(options, args) = parser.parse_args()
+def log_action(message, verbosity=True):
+    if verbosity:
+        print(message, file=stderr)
 
-options.outfile = options.outfile.strip("""\'""")
-protection = options.protection//2
-VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
-min_ins_size, max_ins_size = None, None
-
-if options.min_ins_size > 0 and options.max_ins_size > 0 and options.min_ins_size < options.max_ins_size:
-    min_ins_size = options.min_ins_size
-    max_ins_size = options.max_ins_size
-    sys.stderr.write("Using min/max length cutoffs: %d/%d\n"%(min_ins_size,max_ins_size))
-
-if os.path.exists(options.input):
-    if options.verbose: sys.stderr.write("Reading %s\n"%options.input)
-    infile = open(options.input)
-    for line in infile:
-        if options.verbose: sys.stderr.write(line)
-        cid, chrom, start, end, strand = line.split() # positions should be 0-based and end non-inclusive
-        if chrom not in VALID_CHROMS:
-            continue
-        region_start, region_end = int(start), int(end)
-        if region_start < 1:
-            continue
-     
-        pos_range = defaultdict(lambda:[0,0])
-        filtered_reads = Intersecter()
-     
-        for bamfile in args:
-            if options.verbose: sys.stderr.write("Reading %s\n"%bamfile)
-            bamfile = bamfile.strip("""\'""")
-            if not os.path.exists(bamfile):
-                raise IOError("File not found: {}".format(bamfile))
-            if not (os.path.exists(bamfile.replace(".bam",".bai")) or os.path.exists(bamfile+".bai")):
+def get_arguments():
+    parser = OptionParser()
+    parser.add_option("-i", "--input", help="Regions transcript file")
+    parser.add_option("-l", "--length_sr", help="Full read length (default=76)", default=76, type="int")
+    parser.add_option("-m", "--merged", help="Assume reads are merged",default=False,action="store_true")
+    parser.add_option("-t", "--trimmed", help="Assume reads are trimmed",default=False,action="store_true")
+    parser.add_option("-w", "--protection", help="Base pair protection (default=120)",default=120,type="int")
+    parser.add_option("-o", "--outfile", help="Output file(s) prefix")
+    parser.add_option("-e", "--empty", help="Keep files for empty blocks",default=False,action="store_true")
+    parser.add_option("--min_ins_size", help="Minimum read length threshold to consider (default=None)",default=-1,type="int")
+    parser.add_option("--max_ins_size", help="Minimum read length threshold to consider (default=None)",default=-1,type="int")
+    parser.add_option("--max_length", help="Maximum insert size (default=1000)",default=1000,type="int")
+    parser.add_option("--downsample", help="Ratio to down sample reads",default=None,type="float")
+    parser.add_option("-v","--verbose", help="Be verbose",default=False,action="store_true")
+    options, args = parser.parse_args()
+    options.outfile = options.outfile.strip("""\'""")
+    bamfiles = [bf.strip("""\'""") for bf in args]
+    for bamfile in bamfiles:
+        if not exists(bamfile):
+            raise IOError("File not found: {}".format(bamfile))
+        if not exists(bamfile + ".bai"):
+            if not exists(bamfile.replace(".bam", ".bai")):
                 raise IOError("Index for file {} not found".format(bamfile))
-            input_file = pysam.Samfile( bamfile, "rb" )
-            prefix = ""
-            for tchrom in input_file.references:
-                if tchrom.startswith("chr"): 
-                    prefix = "chr"
-                    break
-            for read in input_file.fetch(prefix+chrom,region_start-protection-1,region_end+protection+1):
-                if read.is_duplicate or read.is_qcfail or read.is_unmapped: continue
-                if is_soft_clipped(read.cigar):
-                    continue
-                if read.is_paired:
-                    if read.mate_is_unmapped:
-                        continue
-                    if read.rnext != read.tid:
-                        continue
-                    if read.is_read1 or (read.is_read2 and read.pnext+read.qlen < region_start-protection-1):
-                        if read.isize == 0:
-                            continue
-                        if options.downsample != None and random.random() >= options.downsample:
-                            continue
-                        rstart = min(read.pos,read.pnext)+1 # 1-based
-                        lseq = abs(read.isize)
-                        rend = rstart+lseq-1 # end included
-                        if min_ins_size != None and ((lseq < min_ins_size) or (lseq > max_ins_size)):
-                            continue
-                        filtered_reads.add_interval(Interval(rstart,rend))
-                        for i in range(rstart,rend+1):
-                            if i >= region_start and i <= region_end:
-                                pos_range[i][0]+=1
-                        if rstart >= region_start and rstart <= region_end:
-                            pos_range[rstart][1]+=1
-                        if rend >= region_start and rend <= region_end:
-                            pos_range[rend][1]+=1
-                else:
-                    if options.downsample != None and random.random() >= options.downsample:
-                        continue
-                    rstart = read.pos+1 # 1-based
-                    lseq = aln_length(read.cigar)
-                    rend = rstart+lseq-1 # end included
-                    if min_ins_size != None and ((lseq < min_ins_size) or (lseq > max_ins_size)):
-                        continue
-                    filtered_reads.add_interval(Interval(rstart,rend))
-                    for i in range(rstart,rend+1):
-                        if i >= region_start and i <= region_end:
-                            pos_range[i][0]+=1
-                    if ((options.merged or read.qname.startswith('M_')) or ((options.trimmed or read.qname.startswith('T_')) and read.qlen <= options.length_sr-10)):
-                        if (rstart >= region_start and rstart <= region_end):
-                            pos_range[rstart][1]+=1
-                        if rend >= region_start and rend <= region_end:
-                            pos_range[rend][1]+=1
+    return options, bamfiles
+
+def get_ins_sizes(options):
+    if 0 < options.min_ins_size < options.max_ins_size:
+        log_mask = "Using min/max length cutoffs: {}/{}"
+        log_action(log_mask.format(options.min_ins_size, options.max_ins_size))
+        return options.min_ins_size, options.max_ins_size
+    else:
+        return None, None
+
+def valid_regions(line_iterator):
+    for line in line_iterator:
+        cid, chrom, start, end, strand = line.split()
+        if (chrom in VALID_CHROMS) and (int(start) >= 1):
+            yield cid, chrom, int(start), int(end), strand
+
+def get_prefix(references):
+    for tchrom in references:
+        if tchrom.startswith("chr"):
+            return "chr"
+    else:
+        return ""
+
+def filter_reads(sam, chrom, region_start, region_end, protection):
+    span_start = region_start - protection - 1
+    span_end = region_end + protection + 1
+    for read in sam.fetch(chrom, span_start, span_end):
+        if options.downsample and random() < options.downsample:
+            if not (read.is_duplicate or read.is_qcfail or read.is_unmapped):
+                if not is_soft_clipped(read.cigar):
+                    yield read
+
+def is_valid_paired(r, region_start, protection, min_ins_size, max_ins_size):
+    if r.is_paired and (not r.mate_is_unmapped) and (r.rnext == r.tid):
+        span_start = region_start - protection - 1
+        if r.is_read1 or (r.is_read2 and r.pnext+r.qlen < span_start):
+            if r.isize != 0:
+                if (min_ins_size == None):
+                    return True
+                elif min_ins_size < abs(r.isize) < max_ins_size:
+                    return True
+    return False
+
+def is_valid_single(r):
+    if (min_ins_size == None):
+        return True
+    elif min_ins_size < aln_length(r.cigar) < max_ins_size:
+        return True
+    else:
+        return False
+
+def as_merged(r, options):
+    return options.merged or r.qname.startswith("M_")
+
+def as_trimmed(r, options):
+    if (options.trimmed or r.qname.startswith("T_")):
+        return r.qlen <= options.length_sr - 10
+    return False
+
+def update_pr_region(pos_range, rstart, rend, region_start, region_end):
+    for i in range(rstart, rend + 1):
+        if region_start <= i <= region_end:
+            pos_range[i][0] += 1
+
+def update_pr_at(pos_range, at, region_start, region_end):
+    if region_start <= at <= region_end:
+        pos_range[at][1] += 1
+
+def get_reads_and_ranges(bamfiles, cid, chrom, region_start, region_end, strand, options):
+    pos_range = defaultdict(lambda: [0,0])
+    filtered_reads = Intersecter()
+    for bamfile in bamfiles:
+        log_action("Reading {}".format(bamfile), options.verbose)
+        with Samfile(bamfile, "rb") as sam:
+            prefix = get_prefix(sam.references)
+            for read in filter_reads(sam, prefix+chrom, region_start, region_end, protection, options):
+                if is_valid_paired(read, region_start, protection, min_ins_size, max_ins_size):
+                    rstart = min(read.pos, read.pnext) + 1
+                    rend = rstart + abs(read.isize) - 1
+                    filtered_reads.add_interval(Interval(rstart, rend))
+                    update_pr_region(pos_range, rstart, rend, region_start, region_end)
+                    update_pr_at(pos_range, rstart, region_start, region_end)
+                    update_pr_at(pos_range, rend, region_start, region_end)
+                elif is_valid_single(read):
+                    rstart = read.pos + 1
+                    rend = rstart + aln_length(read.cigar) - 1
+                    filtered_reads.add_interval(Interval(rstart, rend))
+                    update_pr_region(pos_range, rstart, rend, region_start, region_end)
+                    if as_merged(read, options) or as_trimmed(read, options):
+                        update_pr_at(pos_range, rstart, region_start, region_end)
+                        update_pr_at(pos_range, rend, region_start, region_end)
                     elif read.is_reverse:
-                        if rend >= region_start and rend <= region_end:
-                            pos_range[rend][1]+=1
+                        update_pr_at(pos_range, rend, region_start, region_end)
                     else:
-                        if (rstart >= region_start and rstart <= region_end):
-                            pos_range[rstart][1]+=1
-         
-        filename = options.outfile%cid
-        outfile = gzip.open(filename,'wt')
-        cov_sites = 0
-        out_lines = []
-        for pos in range(region_start, region_end+1):
-            rstart, rend = pos-protection, pos+protection
-            gcount, bcount = 0, 0
-            for read in filtered_reads.find(rstart,rend):
-                if (read.start > rstart) or (read.end < rend):
-                    bcount += 1
-                else:
-                    gcount += 1
-            cov_count, start_count = pos_range[pos]
-            cov_sites += cov_count
-            out_lines.append("%s\t%d\t%d\t%d\t%d\n"%(chrom,pos,cov_count,start_count,gcount-bcount))
+                        update_pr_at(pos_range, rstart, region_start, region_end)
+    return filtered_reads, pos_range
 
-        if strand == "-": out_lines = out_lines[::-1]
-        for line in out_lines: outfile.write(line)
-        outfile.close()
+def calculate_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, strand):
+    cov_sites = 0
+    wps_list = []
+    for pos in range(region_start, region_end + 1):
+        rstart, rend = pos - protection, pos + protection
+        gcount, bcount = 0, 0
+        for read in filtered_reads.find(rstart, rend):
+            if (read.start > rstart) or (read.end < rend):
+                bcount += 1
+            else:
+                gcount += 1
+        cov_count, start_count = pos_range[pos]
+        cov_sites += cov_count
+        wps_list.append([chrom, pos, cov_count, start_count, gcount - bcount])
+    return wps_list, cov_sites
 
-        if cov_sites == 0 and not options.empty:
-            os.remove(filename)
+if __name__ == "__main__":
+    options, bamfiles = get_arguments()
+    min_ins_size, max_ins_size = get_ins_sizes(options)
+    protection = options.protection//2
+    log_action("Reading {}".format(options.input), options.verbose)
+    with open(options.input) as region_file:
+        for region in valid_regions(region_file):
+            filtered_reads, pos_range = get_reads_and_ranges(bamfiles, *region, options)
+            wps_list, cov_sites = calculate_wps(filtered_reads, pos_range, *region, options)
+            if cov_sites or options.empty:
+                if region[4] == "-":
+                    wps_list = reversed(wps_list)
+                with gzip.open(options.outfile%region[0], "wt") as wps_handle:
+                    for line in wps_list:
+                        print(*line, sep="\t", file=wps_handle)
