@@ -7,10 +7,13 @@ import gzip
 from pysam import Samfile
 from random import random
 from optparse import OptionParser
-from collections import defaultdict
+from collections import namedtuple, defaultdict
 from bx.intervals.intersection import Intersecter, Interval
 
 VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
+Region = namedtuple("Region",
+    ["cid", "chrom", "region_start", "region_end", "strand"]
+)
 
 def is_soft_clipped(cigar):
     for op, count in cigar:
@@ -64,7 +67,7 @@ def valid_regions(line_iterator):
     for line in line_iterator:
         cid, chrom, start, end, strand = line.split()
         if (chrom in VALID_CHROMS) and (int(start) >= 1):
-            yield cid, chrom, int(start), int(end), strand
+            yield Region(cid, chrom, int(start), int(end), strand)
 
 def get_chrom_prefix(references):
     for tchrom in references:
@@ -174,9 +177,9 @@ if __name__ == "__main__":
             reads, pos_range = get_reads_and_ranges(bam_handles, *region, options)
             wps_list, cov_sites = get_wps(reads, pos_range, *region, options)
             if cov_sites or options.empty:
-                if region[4] == "-":
+                if region.strand == "-":
                     wps_list = reversed(wps_list)
-                with gzip.open(options.outfile%region[0], "wt") as wps_handle:
+                with gzip.open(options.outfile%region.cid, "wt") as wps_handle:
                     for line in wps_list:
                         print(*line, sep="\t", file=wps_handle)
     for bam_handle in bam_handles:
