@@ -179,3 +179,7 @@ if __name__ == "__main__":
                 with gzip.open(options.outfile%region[0], "wt") as wps_handle:
                     for line in wps_list:
                         print(*line, sep="\t", file=wps_handle)
+    for bam_handle in bam_handles:
+        if bam_handle._isOpen():
+            log_action("Closing {}".format(bam_handle.filename))
+            bam_handle.close()

@@ -11,7 +11,7 @@ rule wps:
             --min_ins_size=120 --max_ins_size=180 \
             -i {input.anno} \
             -o '{params.out_dir}/{wildcards.ref_id}_%s.tsv.gz' \
-            {input.bam};
+            -v {input.bam};
         cd {params.out_dir} && \
             tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \
             rm -f {wildcards.ref_id}_*.tsv.gz;
