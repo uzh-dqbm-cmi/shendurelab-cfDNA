@@ -75,7 +75,7 @@ def get_prefix(references):
     else:
         return ""
 
-def filter_reads(sam, chrom, region_start, region_end, protection):
+def filter_reads(sam, chrom, region_start, region_end, protection, options):
     span_start = region_start - protection - 1
     span_end = region_end + protection + 1
     for read in sam.fetch(chrom, span_start, span_end):
@@ -149,7 +149,7 @@ def get_reads_and_ranges(bamfiles, cid, chrom, region_start, region_end, strand,
                         update_pr_at(pos_range, rstart, region_start, region_end)
     return filtered_reads, pos_range
 
-def calculate_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, strand):
+def calculate_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, strand, options):
     cov_sites = 0
     wps_list = []
     for pos in range(region_start, region_end + 1):
