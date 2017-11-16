@@ -53,15 +53,12 @@ def get_arguments():
         if not exists(bamfile + ".bai"):
             if not exists(bamfile.replace(".bam", ".bai")):
                 raise IOError("Index for file {} not found".format(bamfile))
-    return options, bamfiles
-
-def get_ins_sizes(options):
     if 0 < options.min_ins_size < options.max_ins_size:
         log_mask = "Using min/max length cutoffs: {}/{}"
         log_action(log_mask.format(options.min_ins_size, options.max_ins_size))
-        return options.min_ins_size, options.max_ins_size
     else:
-        return None, None
+        options.min_ins_size, options.max_ins_size = None, None
+    return options, bamfiles
 
 def valid_regions(line_iterator):
     for line in line_iterator:
@@ -85,21 +82,21 @@ def filter_reads(sam, chrom, region_start, region_end, options):
                 if not is_soft_clipped(read.cigar):
                     yield read
 
-def is_valid_paired(r, region_start, min_ins_size, max_ins_size, options):
+def is_valid_paired(r, region_start, options):
     if r.is_paired and (not r.mate_is_unmapped) and (r.rnext == r.tid):
         span_start = region_start - options.prot_radius - 1
         if r.is_read1 or (r.is_read2 and r.pnext+r.qlen < span_start):
             if r.isize != 0:
-                if (min_ins_size == None):
+                if (options.min_ins_size == None):
                     return True
-                elif min_ins_size < abs(r.isize) < max_ins_size:
+                elif options.min_ins_size < abs(r.isize) < options.max_ins_size:
                     return True
     return False
 
-def is_valid_single(r):
-    if (min_ins_size == None):
+def is_valid_single(r, options):
+    if (options.min_ins_size == None):
         return True
-    elif min_ins_size < aln_length(r.cigar) < max_ins_size:
+    elif options.min_ins_size < aln_length(r.cigar) < options.max_ins_size:
         return True
     else:
         return False
@@ -132,14 +129,14 @@ def get_reads_and_ranges(bamfiles, cid, chrom, region_start, region_end, strand,
                 region_start, region_end, options
             )
             for read in read_iterator:
-                if is_valid_paired(read, region_start, min_ins_size, max_ins_size, options):
+                if is_valid_paired(read, region_start, options):
                     rstart = min(read.pos, read.pnext) + 1
                     rend = rstart + abs(read.isize) - 1
                     filtered_reads.add_interval(Interval(rstart, rend))
                     inc_pr(pos_range, rstart, rend, region_start, region_end)
                     inc_pr_at(pos_range, rstart, region_start, region_end)
                     inc_pr_at(pos_range, rend, region_start, region_end)
-                elif is_valid_single(read):
+                elif is_valid_single(read, options):
                     rstart = read.pos + 1
                     rend = rstart + aln_length(read.cigar) - 1
                     filtered_reads.add_interval(Interval(rstart, rend))
@@ -171,7 +168,6 @@ def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, str
 
 if __name__ == "__main__":
     options, bamfiles = get_arguments()
-    min_ins_size, max_ins_size = get_ins_sizes(options)
     log_action("Reading {}".format(options.input), options.verbose)
     with open(options.input) as region_file:
         for region in valid_regions(region_file):
