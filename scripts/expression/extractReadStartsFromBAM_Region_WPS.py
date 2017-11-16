@@ -118,36 +118,35 @@ def inc_pr_at(pos_range, at, region_start, region_end):
     if region_start <= at <= region_end:
         pos_range[at][1] += 1
 
-def get_reads_and_ranges(bamfiles, cid, chrom, region_start, region_end, strand, options):
+def get_reads_and_ranges(bam_handles, cid, chrom, region_start, region_end, strand, options):
     pos_range = defaultdict(lambda: [0,0])
     filtered_reads = Intersecter()
-    for bamfile in bamfiles:
-        log_action("Reading {}".format(bamfile), options.verbose)
-        with Samfile(bamfile, "rb") as sam:
-            read_iterator = filter_reads(
-                sam, get_chrom_prefix(sam.references) + chrom,
-                region_start, region_end, options
-            )
-            for read in read_iterator:
-                if is_valid_paired(read, region_start, options):
-                    rstart = min(read.pos, read.pnext) + 1
-                    rend = rstart + abs(read.isize) - 1
-                    filtered_reads.add_interval(Interval(rstart, rend))
-                    inc_pr(pos_range, rstart, rend, region_start, region_end)
+    for bam_handle in bam_handles:
+        log_action("Reading {}".format(bam_handle.filename), options.verbose)
+        read_iterator = filter_reads(
+            bam_handle, get_chrom_prefix(bam_handle.references) + chrom,
+            region_start, region_end, options
+        )
+        for read in read_iterator:
+            if is_valid_paired(read, region_start, options):
+                rstart = min(read.pos, read.pnext) + 1
+                rend = rstart + abs(read.isize) - 1
+                filtered_reads.add_interval(Interval(rstart, rend))
+                inc_pr(pos_range, rstart, rend, region_start, region_end)
+                inc_pr_at(pos_range, rstart, region_start, region_end)
+                inc_pr_at(pos_range, rend, region_start, region_end)
+            elif is_valid_single(read, options):
+                rstart = read.pos + 1
+                rend = rstart + aln_length(read.cigar) - 1
+                filtered_reads.add_interval(Interval(rstart, rend))
+                inc_pr(pos_range, rstart, rend, region_start, region_end)
+                if as_merged(read, options) or as_trimmed(read, options):
                     inc_pr_at(pos_range, rstart, region_start, region_end)
                     inc_pr_at(pos_range, rend, region_start, region_end)
-                elif is_valid_single(read, options):
-                    rstart = read.pos + 1
-                    rend = rstart + aln_length(read.cigar) - 1
-                    filtered_reads.add_interval(Interval(rstart, rend))
-                    inc_pr(pos_range, rstart, rend, region_start, region_end)
-                    if as_merged(read, options) or as_trimmed(read, options):
-                        inc_pr_at(pos_range, rstart, region_start, region_end)
-                        inc_pr_at(pos_range, rend, region_start, region_end)
-                    elif read.is_reverse:
-                        inc_pr_at(pos_range, rend, region_start, region_end)
-                    else:
-                        inc_pr_at(pos_range, rstart, region_start, region_end)
+                elif read.is_reverse:
+                    inc_pr_at(pos_range, rend, region_start, region_end)
+                else:
+                    inc_pr_at(pos_range, rstart, region_start, region_end)
     return filtered_reads, pos_range
 
 def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, strand, options):
@@ -168,10 +167,11 @@ def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, str
 
 if __name__ == "__main__":
     options, bamfiles = get_arguments()
+    bam_handles = [Samfile(b, "rb") for b in bamfiles]
     log_action("Reading {}".format(options.input), options.verbose)
     with open(options.input) as region_file:
         for region in valid_regions(region_file):
-            reads, pos_range = get_reads_and_ranges(bamfiles, *region, options)
+            reads, pos_range = get_reads_and_ranges(bam_handles, *region, options)
             wps_list, cov_sites = get_wps(reads, pos_range, *region, options)
             if cov_sites or options.empty:
                 if region[4] == "-":
