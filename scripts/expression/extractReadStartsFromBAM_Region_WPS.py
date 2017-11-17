@@ -3,13 +3,73 @@
 
 from sys import stderr
 from os.path import exists
-import gzip
+from gzip import open as gzopen
 from pysam import Samfile
 from random import random
 from optparse import OptionParser
 from collections import namedtuple, defaultdict
 from bx.intervals.intersection import Intersecter, Interval
 from joblib import Parallel, delayed
+
+ARG_RULES = {
+    ("-i", "--input"): {"help": "Regions transcript file"},
+    ("-o", "--outfile"): {"help": "Output file(s) prefix"},
+    ("--chrom_prefix",): {"default": ""},
+    ("-l", "--length_sr"): {
+		"help": "Full read length (default: 76)",
+        "default": 76,
+        "type": "int"
+    },
+    ("-m", "--merged"): {
+		"help": "Assume reads are merged",
+        "default": False,
+        "action": "store_true"
+    },
+    ("-t", "--trimmed"): {
+		"help": "Assume reads are trimmed",
+        "default": False,
+        "action": "store_true"
+    },
+    ("-w", "--protection"): {
+		"help": "Base pair protection (default: 120)",
+        "default": 120,
+        "type": "int"
+    },
+    ("-j", "--jobs"): {
+		"help": "Number of pooled processes",
+        "default": 1,
+        "type": "int"
+    },
+    ("-e", "--empty"): {
+		"help": "Keep files for empty blocks",
+        "default": False,
+        "action": "store_true"
+    },
+    ("--min_ins_size",): {
+		"help": "Minimum read length threshold to consider (default: None)",
+        "default": -1,
+        "type": "int"
+    },
+    ("--max_ins_size",): {
+		"help": "Minimum read length threshold to consider (default: None)",
+        "default": -1,
+        "type": "int"
+    },
+    ("--max_length",): {
+		"help": "Maximum insert size (default: 1000)",
+        "default": 1000,
+        "type": "int"
+    },
+    ("--downsample",): {
+		"help": "Ratio to down sample reads",
+        "default": None,
+        "type": "float"
+    },
+    ("-v", "--verbose"): {
+        "default": False,
+        "action": "store_true",
+    }
+}
 
 VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
 Region = namedtuple("Region", [
@@ -38,22 +98,10 @@ def log_action(message, verbosity=True):
     if verbosity:
         print(message, file=stderr)
 
-def get_arguments():
+def get_arguments(arg_rules):
     parser = OptionParser()
-    parser.add_option("-i", "--input", help="Regions transcript file")
-    parser.add_option("-l", "--length_sr", help="Full read length (default=76)", default=76, type="int")
-    parser.add_option("-m", "--merged", help="Assume reads are merged",default=False,action="store_true")
-    parser.add_option("-t", "--trimmed", help="Assume reads are trimmed",default=False,action="store_true")
-    parser.add_option("-w", "--protection", help="Base pair protection (default=120)",default=120,type="int")
-    parser.add_option("-o", "--outfile", help="Output file(s) prefix")
-    parser.add_option("-j", "--jobs", help="Number of pooled processes", default=1, type="int")
-    parser.add_option("-e", "--empty", help="Keep files for empty blocks",default=False,action="store_true")
-    parser.add_option("--min_ins_size", help="Minimum read length threshold to consider (default=None)",default=-1,type="int")
-    parser.add_option("--max_ins_size", help="Minimum read length threshold to consider (default=None)",default=-1,type="int")
-    parser.add_option("--max_length", help="Maximum insert size (default=1000)",default=1000,type="int")
-    parser.add_option("--downsample", help="Ratio to down sample reads",default=None,type="float")
-    parser.add_option("--chrom_prefix", default="")
-    parser.add_option("-v","--verbose", help="Be verbose",default=False,action="store_true")
+    for rule_unnamed, rule_named in arg_rules.items():
+        parser.add_option(*rule_unnamed, **rule_named)
     options, args = parser.parse_args()
     options.prot_radius = int(options.protection / 2)
     options.outfile = options.outfile.strip("""\'""")
@@ -76,15 +124,15 @@ def pickleable_region(bam_fetch):
         for read in bam_fetch
     ]
 
-def valid_regions(line_iterator, bam_handle, options):
-    for line in line_iterator:
+def valid_regions(anno, bam, options):
+    for line in anno:
         cid, chrom, start, end, strand = line.split()
         region_start, region_end = int(start), int(end)
         span_start = region_start - options.prot_radius - 1
         span_end = region_end + options.prot_radius + 1
         if (chrom in VALID_CHROMS) and (region_start >= 1):
             region = Region(cid, chrom, int(start), int(end), strand)
-            bam_fetch = bam_handle.fetch(chrom, span_start, span_end)
+            bam_fetch = bam.fetch(chrom, span_start, span_end)
             bam_region = pickleable_region(bam_fetch)
             yield region, bam_region
 
@@ -182,18 +230,14 @@ def generate_region_file(bam_region, region, options):
     if cov_sites or options.empty:
         if region.strand == "-":
             wps_list = reversed(wps_list)
-        with gzip.open(options.outfile%region.cid, "wt") as wps_handle:
+        with gzopen(options.outfile%region.cid, "wt") as wps_handle:
             for line in wps_list:
                 print(*line, sep="\t", file=wps_handle)
 
 if __name__ == "__main__":
-    options, bamfile = get_arguments()
-    with Samfile(bamfile, "rb") as bam_handle:
-        with open(options.input) as annotation_file:
-            Parallel(n_jobs=options.jobs)(
-                delayed(generate_region_file)(
-                    bam_region, region, options
-                )
-                for region, bam_region
-                in valid_regions(annotation_file, bam_handle, options)
-            )
+    options, bamfile = get_arguments(ARG_RULES)
+    with Samfile(bamfile, "rb") as bam, open(options.input) as anno:
+        Parallel(n_jobs=options.jobs)(
+            delayed(generate_region_file)(bam_region, region, options)
+            for region, bam_region in valid_regions(anno, bam, options)
+        )
