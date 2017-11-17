@@ -5,12 +5,14 @@ rule wps:
         bai="{data}/individuals/{subject}/{subject}.bam.bai",
         anno="{data}/annotations/transcriptAnno-{ref_id}.body.tsv"
     output: "{data,[^/]+}/individuals/{subject}/wps/{ref_id,[^/]+}.tar"
+    threads: 256
     params: out_dir="{data}/individuals/{subject}/wps"
     shell: """
         scripts/expression/extractReadStartsFromBAM_Region_WPS.py \
             --min_ins_size=120 --max_ins_size=180 \
             -i {input.anno} \
             -o '{params.out_dir}/{wildcards.ref_id}_%s.tsv.gz' \
+            -j {threads} \
             -v {input.bam};
         cd {params.out_dir} && \
             tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \
@@ -21,6 +23,7 @@ rule fft:
     """Convert window protection scores"""
     input: rules.wps.output
     output: "{data,[^/]+}/individuals/{subject}/fft/{ref_id,[^/]+}.tar"
+    threads: 256
     params:
         in_dir="{data}/individuals/{subject}/wps",
         out_dir="{data}/individuals/{subject}/fft"
@@ -28,7 +31,7 @@ rule fft:
         cwd=$(pwd);
         cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
         cd $cwd && (cd {params.in_dir}; \ls {wildcards.ref_id}_*.tsv.gz) | \
-            xargs -n 500 \
+            xargs -P{threads} -n 500 \
             Rscript scripts/expression/fft_path.R \
                 {params.in_dir} {params.out_dir};
         cd $cwd/{params.out_dir} && \
