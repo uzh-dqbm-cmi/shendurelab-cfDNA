@@ -16,52 +16,52 @@ ARG_RULES = {
     ("-o", "--outfile"): {"help": "Output file(s) prefix"},
     ("--chrom_prefix",): {"default": ""},
     ("-l", "--length_sr"): {
-		"help": "Full read length (default: 76)",
+        "help": "Full read length (default: 76)",
         "default": 76,
         "type": "int"
     },
     ("-m", "--merged"): {
-		"help": "Assume reads are merged",
+        "help": "Assume reads are merged",
         "default": False,
         "action": "store_true"
     },
     ("-t", "--trimmed"): {
-		"help": "Assume reads are trimmed",
+        "help": "Assume reads are trimmed",
         "default": False,
         "action": "store_true"
     },
     ("-w", "--protection"): {
-		"help": "Base pair protection (default: 120)",
+        "help": "Base pair protection (default: 120)",
         "default": 120,
         "type": "int"
     },
     ("-j", "--jobs"): {
-		"help": "Number of pooled processes",
+        "help": "Number of pooled processes",
         "default": 1,
         "type": "int"
     },
     ("-e", "--empty"): {
-		"help": "Keep files for empty blocks",
+        "help": "Keep files for empty blocks",
         "default": False,
         "action": "store_true"
     },
     ("--min_ins_size",): {
-		"help": "Minimum read length threshold to consider (default: None)",
+        "help": "Minimum read length threshold to consider (default: None)",
         "default": -1,
         "type": "int"
     },
     ("--max_ins_size",): {
-		"help": "Minimum read length threshold to consider (default: None)",
+        "help": "Minimum read length threshold to consider (default: None)",
         "default": -1,
         "type": "int"
     },
     ("--max_length",): {
-		"help": "Maximum insert size (default: 1000)",
+        "help": "Maximum insert size (default: 1000)",
         "default": 1000,
         "type": "int"
     },
     ("--downsample",): {
-		"help": "Ratio to down sample reads",
+        "help": "Ratio to down sample reads",
         "default": None,
         "type": "float"
     },
