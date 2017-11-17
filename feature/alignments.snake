@@ -2,4 +2,5 @@ rule bam_index:
     """Generate a samtools index for any bam file"""
     input: "{prefix}.bam"
     output: "{prefix}.bam.bai"
-    shell: "samtools index {input} {output}"
+    threads: 256
+    shell: "samtools index -@ {threads} {input} {output}"
