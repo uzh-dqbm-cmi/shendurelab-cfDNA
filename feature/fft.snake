@@ -5,12 +5,14 @@ rule wps:
         bai="{data}/individuals/{subject}/{subject}.bam.bai",
         anno="{data}/annotations/transcriptAnno-{ref_id}.body.tsv"
     output: "{data,[^/]+}/individuals/{subject}/wps/{ref_id,[^/]+}.tar"
+    threads: 256
     params: out_dir="{data}/individuals/{subject}/wps"
     shell: """
         scripts/expression/extractReadStartsFromBAM_Region_WPS.py \
             --min_ins_size=120 --max_ins_size=180 \
             -i {input.anno} \
             -o '{params.out_dir}/{wildcards.ref_id}_%s.tsv.gz' \
+            -j {threads} \
             -v {input.bam};
         cd {params.out_dir} && \
             tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \

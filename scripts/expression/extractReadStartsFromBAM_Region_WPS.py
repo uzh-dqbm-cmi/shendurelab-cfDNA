@@ -9,11 +9,17 @@ from random import random
 from optparse import OptionParser
 from collections import namedtuple, defaultdict
 from bx.intervals.intersection import Intersecter, Interval
+from joblib import Parallel, delayed
 
 VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
-Region = namedtuple("Region",
-    ["cid", "chrom", "region_start", "region_end", "strand"]
-)
+Region = namedtuple("Region", [
+    "cid", "chrom", "region_start", "region_end", "strand"
+])
+Read = namedtuple("Read", [
+    "cigar", "end", "is_duplicate", "isize", "is_paired", "is_qcfail",
+    "is_read1", "is_read2", "is_reverse", "is_unmapped", "mate_is_unmapped",
+    "pnext", "pos", "qlen", "qname", "rnext", "start", "tid"
+])
 
 def is_soft_clipped(cigar):
     for op, count in cigar:
@@ -40,11 +46,13 @@ def get_arguments():
     parser.add_option("-t", "--trimmed", help="Assume reads are trimmed",default=False,action="store_true")
     parser.add_option("-w", "--protection", help="Base pair protection (default=120)",default=120,type="int")
     parser.add_option("-o", "--outfile", help="Output file(s) prefix")
+    parser.add_option("-j", "--jobs", help="Number of pooled processes", default=1, type="int")
     parser.add_option("-e", "--empty", help="Keep files for empty blocks",default=False,action="store_true")
     parser.add_option("--min_ins_size", help="Minimum read length threshold to consider (default=None)",default=-1,type="int")
     parser.add_option("--max_ins_size", help="Minimum read length threshold to consider (default=None)",default=-1,type="int")
     parser.add_option("--max_length", help="Maximum insert size (default=1000)",default=1000,type="int")
     parser.add_option("--downsample", help="Ratio to down sample reads",default=None,type="float")
+    parser.add_option("--chrom_prefix", default="")
     parser.add_option("-v","--verbose", help="Be verbose",default=False,action="store_true")
     options, args = parser.parse_args()
     options.prot_radius = int(options.protection / 2)
@@ -63,23 +71,26 @@ def get_arguments():
         options.min_ins_size, options.max_ins_size = None, None
     return options, bamfiles
 
-def valid_regions(line_iterator):
+def pickleable_region(bam_fetch):
+    return [
+        Read(*[getattr(read, attr, None) for attr in Read._fields])
+        for read in bam_fetch
+    ]
+
+def valid_regions(line_iterator, bam_handle, options):
     for line in line_iterator:
         cid, chrom, start, end, strand = line.split()
-        if (chrom in VALID_CHROMS) and (int(start) >= 1):
-            yield Region(cid, chrom, int(start), int(end), strand)
+        region_start, region_end = int(start), int(end)
+        span_start = region_start - options.prot_radius - 1
+        span_end = region_end + options.prot_radius + 1
+        if (chrom in VALID_CHROMS) and (region_start >= 1):
+            region = Region(cid, chrom, int(start), int(end), strand)
+            bam_fetch = bam_handle.fetch(chrom, span_start, span_end)
+            bam_region = pickleable_region(bam_fetch)
+            yield region, bam_region
 
-def get_chrom_prefix(references):
-    for tchrom in references:
-        if tchrom.startswith("chr"):
-            return "chr"
-    else:
-        return ""
-
-def filter_reads(bam_handle, chrom, region_start, region_end, options):
-    span_start = region_start - options.prot_radius - 1
-    span_end = region_end + options.prot_radius + 1
-    for read in bam_handle.fetch(chrom, span_start, span_end):
+def filter_reads(bam_region, chrom, region_start, region_end, options):
+    for read in bam_region:
         if (not options.downsample) or (random() < options.downsample):
             if not (read.is_duplicate or read.is_qcfail or read.is_unmapped):
                 if not is_soft_clipped(read.cigar):
@@ -121,35 +132,33 @@ def inc_pr_at(pos_range, at, region_start, region_end):
     if region_start <= at <= region_end:
         pos_range[at][1] += 1
 
-def get_reads_and_ranges(bam_handles, cid, chrom, region_start, region_end, strand, options):
+def get_reads_and_ranges(bam_region, cid, chrom, region_start, region_end, strand, options):
     pos_range = defaultdict(lambda: [0,0])
     filtered_reads = Intersecter()
-    for bam_handle in bam_handles:
-        log_action("Reading {}".format(bam_handle.filename), options.verbose)
-        read_iterator = filter_reads(
-            bam_handle, get_chrom_prefix(bam_handle.references) + chrom,
-            region_start, region_end, options
-        )
-        for read in read_iterator:
-            if is_valid_paired(read, region_start, options):
-                rstart = min(read.pos, read.pnext) + 1
-                rend = rstart + abs(read.isize) - 1
-                filtered_reads.add_interval(Interval(rstart, rend))
-                inc_pr(pos_range, rstart, rend, region_start, region_end)
+    read_iterator = filter_reads(
+        bam_region, options.chrom_prefix + chrom,
+        region_start, region_end, options
+    )
+    for read in read_iterator:
+        if is_valid_paired(read, region_start, options):
+            rstart = min(read.pos, read.pnext) + 1
+            rend = rstart + abs(read.isize) - 1
+            filtered_reads.add_interval(Interval(rstart, rend))
+            inc_pr(pos_range, rstart, rend, region_start, region_end)
+            inc_pr_at(pos_range, rstart, region_start, region_end)
+            inc_pr_at(pos_range, rend, region_start, region_end)
+        elif is_valid_single(read, options):
+            rstart = read.pos + 1
+            rend = rstart + aln_length(read.cigar) - 1
+            filtered_reads.add_interval(Interval(rstart, rend))
+            inc_pr(pos_range, rstart, rend, region_start, region_end)
+            if as_merged(read, options) or as_trimmed(read, options):
                 inc_pr_at(pos_range, rstart, region_start, region_end)
                 inc_pr_at(pos_range, rend, region_start, region_end)
-            elif is_valid_single(read, options):
-                rstart = read.pos + 1
-                rend = rstart + aln_length(read.cigar) - 1
-                filtered_reads.add_interval(Interval(rstart, rend))
-                inc_pr(pos_range, rstart, rend, region_start, region_end)
-                if as_merged(read, options) or as_trimmed(read, options):
-                    inc_pr_at(pos_range, rstart, region_start, region_end)
-                    inc_pr_at(pos_range, rend, region_start, region_end)
-                elif read.is_reverse:
-                    inc_pr_at(pos_range, rend, region_start, region_end)
-                else:
-                    inc_pr_at(pos_range, rstart, region_start, region_end)
+            elif read.is_reverse:
+                inc_pr_at(pos_range, rend, region_start, region_end)
+            else:
+                inc_pr_at(pos_range, rstart, region_start, region_end)
     return filtered_reads, pos_range
 
 def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, strand, options):
@@ -168,8 +177,8 @@ def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, str
         wps_list.append([chrom, pos, cov_count, start_count, gcount - bcount])
     return wps_list, cov_sites
 
-def generate_region_file(bam_handles, region, options):
-    reads, pos_range = get_reads_and_ranges(bam_handles, *region, options)
+def generate_region_file(bam_region, region, options):
+    reads, pos_range = get_reads_and_ranges(bam_region, *region, options)
     wps_list, cov_sites = get_wps(reads, pos_range, *region, options)
     if cov_sites or options.empty:
         if region.strand == "-":
@@ -183,8 +192,13 @@ if __name__ == "__main__":
     bam_handles = [Samfile(b, "rb") for b in bamfiles]
     log_action("Reading {}".format(options.input), options.verbose)
     with open(options.input) as annotation_file:
-        for region in valid_regions(annotation_file):
-            generate_region_file(bam_handles, region, options)
+        Parallel(n_jobs=options.jobs)(
+            delayed(generate_region_file)(
+                bam_region, region, options
+            )
+            for region, bam_region
+            in valid_regions(annotation_file, bam_handles[0], options)
+        )
     for bam_handle in bam_handles:
         if bam_handle._isOpen():
             log_action("Closing {}".format(bam_handle.filename))
