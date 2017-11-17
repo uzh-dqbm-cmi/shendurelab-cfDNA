@@ -57,19 +57,18 @@ def get_arguments():
     options, args = parser.parse_args()
     options.prot_radius = int(options.protection / 2)
     options.outfile = options.outfile.strip("""\'""")
-    bamfiles = [bf.strip("""\'""") for bf in args]
-    for bamfile in bamfiles:
-        if not exists(bamfile):
-            raise IOError("File not found: {}".format(bamfile))
-        if not exists(bamfile + ".bai"):
-            if not exists(bamfile.replace(".bam", ".bai")):
-                raise IOError("Index for file {} not found".format(bamfile))
+    bamfile = args[0].strip("""\'""")
+    if not exists(bamfile):
+        raise IOError("File not found: {}".format(bamfile))
+    if not exists(bamfile + ".bai"):
+        if not exists(bamfile.replace(".bam", ".bai")):
+            raise IOError("Index for file {} not found".format(bamfile))
     if 0 < options.min_ins_size < options.max_ins_size:
         log_mask = "Using min/max length cutoffs: {}/{}"
         log_action(log_mask.format(options.min_ins_size, options.max_ins_size))
     else:
         options.min_ins_size, options.max_ins_size = None, None
-    return options, bamfiles
+    return options, bamfile
 
 def pickleable_region(bam_fetch):
     return [
@@ -188,18 +187,13 @@ def generate_region_file(bam_region, region, options):
                 print(*line, sep="\t", file=wps_handle)
 
 if __name__ == "__main__":
-    options, bamfiles = get_arguments()
-    bam_handles = [Samfile(b, "rb") for b in bamfiles]
-    log_action("Reading {}".format(options.input), options.verbose)
-    with open(options.input) as annotation_file:
-        Parallel(n_jobs=options.jobs)(
-            delayed(generate_region_file)(
-                bam_region, region, options
+    options, bamfile = get_arguments()
+    with Samfile(bamfile, "rb") as bam_handle:
+        with open(options.input) as annotation_file:
+            Parallel(n_jobs=options.jobs)(
+                delayed(generate_region_file)(
+                    bam_region, region, options
+                )
+                for region, bam_region
+                in valid_regions(annotation_file, bam_handle, options)
             )
-            for region, bam_region
-            in valid_regions(annotation_file, bam_handles[0], options)
-        )
-    for bam_handle in bam_handles:
-        if bam_handle._isOpen():
-            log_action("Closing {}".format(bam_handle.filename))
-            bam_handle.close()
