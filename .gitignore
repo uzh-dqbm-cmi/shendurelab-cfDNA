@@ -66,3 +66,4 @@ expression/transcriptAnno-GRCh37.75.upstream.tsv
 .snakemake
 data
 scripts/expression/.*
+sandbox
