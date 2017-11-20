@@ -67,3 +67,4 @@ expression/transcriptAnno-GRCh37.75.upstream.tsv
 data
 scripts/expression/.*
 sandbox
+sandbox.snake
