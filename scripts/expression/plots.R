@@ -1,9 +1,22 @@
 #!/usr/bin/env Rscript
 
 library("optparse")
-library("gplots")
 
 opt = parse_args(OptionParser(option_list=list(
+    make_option(
+        c("-p", "--protein_atlas"),
+        type="character",
+        default=NULL,
+        help="Protein Atlas RNA table (tsv)",
+        metavar="P"
+    ),
+    make_option(
+        c("-l", "--labels"),
+        type="character",
+        default=NULL,
+        help="Expression labels",
+        metavar="L"
+    ),
     make_option(
         c("-m", "--mask"),
         type="character",
@@ -24,6 +37,13 @@ opt = parse_args(OptionParser(option_list=list(
         default=NULL,
         help="IDs of other individuals",
         metavar="I"
+    ),
+    make_option(
+        c("-o", "--output_directory"),
+        type="character",
+        default=NULL,
+        help="Output directory",
+        metavar="O"
     )
 )))
 
@@ -33,7 +53,7 @@ samples = c(reference, individuals)
 
 ##################################
 
-proteinAtlas <- read.table("protein_atlas/RNAtable.tsv",header=T,as.is=T,sep="\t")
+proteinAtlas <- read.table(opt[["protein_atlas"]],header=T,as.is=T,sep="\t")
 rownames(proteinAtlas) <- proteinAtlas$GeneID
 
 ndata <- proteinAtlas[,-1]
@@ -46,14 +66,16 @@ dim(logndata)
 
 ##################################
 
-tLabels <- read.table("labels.txt",header=T,as.is=T,sep="\t",quote="\"")
+tLabels <- read.table(opt[["labels"]],header=T,as.is=T,sep="\t",quote="\"")
 
 fftColumns <- 29:52 # 160-222
 selFreq <- c("193","196","199")
 
 ##################################
 
-pdf("allFreq_correlation_plot.pdf",width=8,height=6)
+allfreq = paste(opt[["output_directory"]], "allfreq_correlation.pdf", sep="/")
+pdf(allfreq, width=8, height=6)
+
 for (sample in samples)
 {
     fdata <- read.table(sprintf(opt[["mask"]],sample),as.is=T,sep="\t",header=T,comment.char="~")
@@ -72,7 +94,8 @@ dev.off()
 
 ##################################
 
-pdf("Ave193-199bp_correlation.pdf",width=8,height=15)
+out_mask = paste(opt[["output_directory"]], "%s_ave193-199bp_correlation.txt", sep="/")
+
 for (sample in samples)
 {
     fdata <- read.table(sprintf(opt[["mask"]],sample),as.is=T,sep="\t",header=T,comment.char="~")
@@ -83,14 +106,14 @@ for (sample in samples)
  
     res <- cor(rowMeans(fdata[,selFreq]),logndata2[,order(names(logndata2))],use="pairwise.complete.obs")
     res <- data.frame(category=tLabels$Category,description=tLabels$Type,tissue=colnames(res),correlation=as.numeric(res))
-    textplot(res[order(res$correlation),])
-    title(sample)
+    sink(sprintf(out_mask, sample))
+    print(sample)
+    print(res[order(res$correlation),])
+    sink()
 }
-dev.off()
 
 ##################################
 
-# Replace BH01 with sample you are using as reference in the rank comparison
 fdata <- read.table(sprintf(opt[["mask"]],opt[["reference"]]),as.is=T,sep="\t",header=T,comment.char="~")
 colnames(fdata) <- sub("X","",colnames(fdata))
 rownames(fdata) <- fdata[,1]
@@ -98,7 +121,7 @@ fdata <- fdata[,c(1,rev(c(2:dim(fdata)[2])))]
 logndata2 <- logndata[fdata[,1],]
 refCorrelation <- cor(rowMeans(fdata[,selFreq]),logndata2[,order(names(logndata2))],use="pairwise.complete.obs")
 
-pdf("Ave193-199bp_correlation_rank.pdf",width=10,height=15)
+out_mask = paste(opt[["output_directory"]], "%s_ave193-199bp_correlation_rank.txt", sep="/")
 
 for (sample in samples)
 {
@@ -111,10 +134,11 @@ for (sample in samples)
     res <- cor(rowMeans(fdata[,selFreq]),logndata2[,order(names(logndata2))],use="pairwise.complete.obs")
     res <- data.frame(category=tLabels$Category,description=tLabels$Type,tissue=colnames(res),correlation=as.numeric(res),rankDiff=rank(refCorrelation)-rank(res))
     par(mfrow=c(2,1))
-    textplot(head(res[order(res$rankDiff,decreasing=T),],15))
-    title(sprintf("By correlation rank difference: %s (vs. normal)",sample))
-    textplot(head(res[order(res$correlation),],15))
-    title(sprintf("By correlation: %s",sample))
+ 
+    sink(sprintf(out_mask, sample))
+    sprintf("By correlation rank difference: %s (vs. normal)",sample)
+    print(head(res[order(res$rankDiff,decreasing=T),],15))
+    sprintf("By correlation: %s",sample)
+    print(head(res[order(res$correlation),],15))
+    sink()
 }
-
-dev.off()
