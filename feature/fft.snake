@@ -44,9 +44,9 @@ rule fft_summaries:
     """Calculate WPS, cov, starts for correlation analyses"""
     input: rules.fft.output
     output:
-        "{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_WPS.tsv.gz",
-        "{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_cov.tsv.gz",
-        "{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_starts.tsv.gz"
+        wps="{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_WPS.tsv.gz",
+        cov="{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_cov.tsv.gz",
+        starts="{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_starts.tsv.gz"
     params:
         in_dir="{data}/individuals/{subject}/fft",
         out_dir="{data}/fft_summaries",
@@ -61,4 +61,49 @@ rule fft_summaries:
             -p . \
             -i {wildcards.subject};
         cd $cwd/{params.in_dir} && rm -f {wildcards.ref_id}_*.tsv.gz;
+    """
+
+rule correlations:
+    """Generate correlation plots and tables"""
+    input:
+        individual="{data}/fft_summaries/{ref_id}/fft_{subject}_WPS.tsv.gz",
+    output:
+        corr_plot="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_correlation.pdf",
+        corr_text="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_ave193-199bp_correlation.txt",
+    params:
+        in_mask="{data}/fft_summaries/{ref_id}/fft_%s_WPS.tsv.gz",
+        out_dir="{data}/correlations/{ref_id}/{subject}",
+        rna_table="{data}/annotations/protein_atlas_rna_table.tsv",
+        labels="metadata/expression_labels.txt"
+    shell: """
+        scripts/expression/correlations.R \
+            -m '{params.in_mask}' \
+            -i {wildcards.subject} \
+            -p {params.rna_table} \
+            -l {params.labels} \
+            -o {params.out_dir};
+        rm -f Rplots.pdf
+    """
+
+rule correlation_ranks:
+    """Generate correlation ranks"""
+    input:
+        individual="{data}/fft_summaries/{ref_id}/fft_{subject}_WPS.tsv.gz",
+        reference="{data}/fft_summaries/{ref_id}/fft_{base}_WPS.tsv.gz",
+    output:
+        corr_rank="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_by_{base}_ave193-199bp_correlation_rank.txt"
+    params:
+        in_mask="{data}/fft_summaries/{ref_id}/fft_%s_WPS.tsv.gz",
+        out_dir="{data}/correlations/{ref_id}/{subject}",
+        rna_table="{data}/annotations/protein_atlas_rna_table.tsv",
+        labels="metadata/expression_labels.txt"
+    shell: """
+        scripts/expression/correlation_ranks.R \
+            -m '{params.in_mask}' \
+            -r {wildcards.base} \
+            -i {wildcards.subject} \
+            -p {params.rna_table} \
+            -l {params.labels} \
+            -o {params.out_dir};
+        rm -f Rplots.pdf
     """
