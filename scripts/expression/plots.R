@@ -1,4 +1,35 @@
-samples <- c("BH01","IH01","IH02")
+#!/usr/bin/env Rscript
+
+library("optparse")
+library("gplots")
+
+opt = parse_args(OptionParser(option_list=list(
+    make_option(
+        c("-m", "--mask"),
+        type="character",
+        default=NULL,
+        help="WPS path and file mask (with %s)",
+        metavar="M"
+    ),
+    make_option(
+        c("-r", "--reference"),
+        type="character",
+        default=NULL,
+        help="ID of the reference individual",
+        metavar="R"
+    ),
+    make_option(
+        c("-i", "--individuals"),
+        type="character",
+        default=NULL,
+        help="IDs of other individuals",
+        metavar="I"
+    )
+)))
+
+reference = opt[["reference"]]
+individuals = strsplit(opt[["individuals"]], ",")[[1]]
+samples = c(reference, individuals)
 
 ##################################
 
@@ -20,14 +51,12 @@ tLabels <- read.table("labels.txt",header=T,as.is=T,sep="\t",quote="\"")
 fftColumns <- 29:52 # 160-222
 selFreq <- c("193","196","199")
 
-library(gplots)
-
 ##################################
 
 pdf("allFreq_correlation_plot.pdf",width=8,height=6)
 for (sample in samples)
 {
-    fdata <- read.table(sprintf("fft_summaries/fft_%s_WPS.tsv.gz",sample),as.is=T,sep="\t",header=T,comment.char="~")
+    fdata <- read.table(sprintf(opt[["mask"]],sample),as.is=T,sep="\t",header=T,comment.char="~")
     colnames(fdata) <- sub("X","",colnames(fdata))
     rownames(fdata) <- fdata[,1]
     fdata <- fdata[,c(1,rev(c(2:dim(fdata)[2])))]
@@ -46,7 +75,7 @@ dev.off()
 pdf("Ave193-199bp_correlation.pdf",width=8,height=15)
 for (sample in samples)
 {
-    fdata <- read.table(sprintf("fft_summaries/fft_%s_WPS.tsv.gz",sample),as.is=T,sep="\t",header=T,comment.char="~")
+    fdata <- read.table(sprintf(opt[["mask"]],sample),as.is=T,sep="\t",header=T,comment.char="~")
     colnames(fdata) <- sub("X","",colnames(fdata))
     rownames(fdata) <- fdata[,1]
     fdata <- fdata[,c(1,rev(c(2:dim(fdata)[2])))]
@@ -62,7 +91,7 @@ dev.off()
 ##################################
 
 # Replace BH01 with sample you are using as reference in the rank comparison
-fdata <- read.table(sprintf("fft_summaries/fft_%s_WPS.tsv.gz","BH01"),as.is=T,sep="\t",header=T,comment.char="~")
+fdata <- read.table(sprintf(opt[["mask"]],opt[["reference"]]),as.is=T,sep="\t",header=T,comment.char="~")
 colnames(fdata) <- sub("X","",colnames(fdata))
 rownames(fdata) <- fdata[,1]
 fdata <- fdata[,c(1,rev(c(2:dim(fdata)[2])))]
@@ -73,7 +102,7 @@ pdf("Ave193-199bp_correlation_rank.pdf",width=10,height=15)
 
 for (sample in samples)
 {
-    fdata <- read.table(sprintf("fft_summaries/fft_%s_WPS.tsv.gz",sample),as.is=T,sep="\t",header=T,comment.char="~")
+    fdata <- read.table(sprintf(opt[["mask"]],sample),as.is=T,sep="\t",header=T,comment.char="~")
     colnames(fdata) <- sub("X","",colnames(fdata))
     rownames(fdata) <- fdata[,1]
     fdata <- fdata[,c(1,rev(c(2:dim(fdata)[2])))]
