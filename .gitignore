@@ -60,3 +60,11 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+expression/transcriptAnno-GRCh37.75.body.tsv
+expression/transcriptAnno-GRCh37.75.downstream.tsv
+expression/transcriptAnno-GRCh37.75.upstream.tsv
+.snakemake
+data
+scripts/expression/.*
+sandbox
+sandbox.snake
