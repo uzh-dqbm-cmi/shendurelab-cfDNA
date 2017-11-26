@@ -29,7 +29,7 @@ rule fft:
     output: "{data,[^/]+}/individuals/{subject}/fft/{ref_id,[^/]+}.tar"
     threads: 256
     params:
-        sub_script="scripts/expression/fft_path.R"
+        sub_script="scripts/expression/fft_path.R",
         in_dir="{data}/individuals/{subject}/wps",
         out_dir="{data}/individuals/{subject}/fft"
     run:
@@ -55,7 +55,7 @@ rule fft_summaries:
         cov="{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_cov.tsv.gz",
         starts="{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_starts.tsv.gz"
     params:
-        sub_script="scripts/expression/convert_files.py"
+        sub_script="scripts/expression/convert_files.py",
         in_dir="{data}/individuals/{subject}/fft",
         out_dir="{data}/fft_summaries",
         anno="{data}/annotations/transcriptAnno-{ref_id}.body.tsv"
@@ -81,7 +81,7 @@ rule correlations:
         corr_plot="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_correlation.pdf",
         corr_text="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_ave193-199bp_correlation.txt",
     params:
-        sub_script="scripts/expression/correlations.R"
+        sub_script="scripts/expression/correlations.R",
         in_mask="{data}/fft_summaries/{ref_id}/fft_%s_WPS.tsv.gz",
         out_dir="{data}/correlations/{ref_id}/{subject}",
         rna_table="{data}/annotations/protein_atlas_rna_table.tsv",
@@ -106,7 +106,7 @@ rule correlation_ranks:
     output:
         corr_rank="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_by_{base}_ave193-199bp_correlation_rank.txt"
     params:
-        sub_script="scripts/expression/correlation_ranks.R"
+        sub_script="scripts/expression/correlation_ranks.R",
         in_mask="{data}/fft_summaries/{ref_id}/fft_%s_WPS.tsv.gz",
         out_dir="{data}/correlations/{ref_id}/{subject}",
         rna_table="{data}/annotations/protein_atlas_rna_table.tsv",
