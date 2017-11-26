@@ -71,7 +71,7 @@ ARG_RULES = {
     }
 }
 
-VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
+VALID_CHROMS = set(map(str, list(range(1, 23))+ ["X", "Y"]))
 Region = namedtuple("Region", [
     "cid", "chrom", "region_start", "region_end", "strand"
 ])
@@ -132,7 +132,11 @@ def valid_regions(anno, bam, options):
         span_end = region_end + options.prot_radius + 1
         if (chrom in VALID_CHROMS) and (region_start >= 1):
             region = Region(cid, chrom, int(start), int(end), strand)
-            bam_fetch = bam.fetch(chrom, span_start, span_end)
+            bam_fetch = bam.fetch(
+                options.chrom_prefix + chrom,
+                span_start,
+                span_end
+            )
             bam_region = pickleable_region(bam_fetch)
             yield region, bam_region
 
