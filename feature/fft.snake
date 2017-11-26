@@ -10,7 +10,7 @@ rule wps:
         sub_script="scripts/expression/extractReadStartsFromBAM_Region_WPS.py",
         out_dir="{data}/individuals/{subject}/wps"
     run:
-        addwd(params, rule)
+        addwd(params, rule, parent=True)
         shell("""
             {params.wd}/{params.sub_script} \
                 --min_ins_size=120 --max_ins_size=180 \
@@ -33,7 +33,7 @@ rule fft:
         in_dir="{data}/individuals/{subject}/wps",
         out_dir="{data}/individuals/{subject}/fft"
     run:
-        addwd(params, rule)
+        addwd(params, rule, parent=True)
         shell("""
             cwd=$(pwd);
             cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
@@ -60,7 +60,7 @@ rule fft_summaries:
         out_dir="{data}/fft_summaries",
         anno="{data}/annotations/transcriptAnno-{ref_id}.body.tsv"
     run:
-        addwd(params, rule)
+        addwd(params, rule, parent=True)
         shell("""
             cwd=$(pwd);
             cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
@@ -87,7 +87,7 @@ rule correlations:
         rna_table="{data}/annotations/protein_atlas_rna_table.tsv",
         labels="metadata/expression_labels.txt"
     run:
-        addwd(params, rule)
+        addwd(params, rule, parent=True)
         shell("""
             {params.wd}/{params.sub_script} \
                 -m '{params.in_mask}' \
@@ -112,7 +112,7 @@ rule correlation_ranks:
         rna_table="{data}/annotations/protein_atlas_rna_table.tsv",
         labels="metadata/expression_labels.txt"
     run:
-        addwd(params, rule)
+        addwd(params, rule, parent=True)
         shell("""
             {params.wd}/{params.sub_script} \
                 -m '{params.in_mask}' \
