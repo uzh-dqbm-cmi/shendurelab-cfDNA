@@ -95,7 +95,7 @@ rule correlations:
                 -m '{params.in_mask}' \
                 -i {wildcards.subject} \
                 -p {params.rna_table} \
-                -l {params.labels} \
+                -l {params.wd}/{params.labels} \
                 -o {params.out_dir};
             rm -f Rplots.pdf
         """)
@@ -121,7 +121,7 @@ rule correlation_ranks:
                 -r {wildcards.base} \
                 -i {wildcards.subject} \
                 -p {params.rna_table} \
-                -l {params.labels} \
+                -l {params.wd}/{params.labels} \
                 -o {params.out_dir};
             rm -f Rplots.pdf
         """)
