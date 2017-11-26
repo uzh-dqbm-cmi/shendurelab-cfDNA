@@ -6,18 +6,22 @@ rule wps:
         anno="{data}/annotations/transcriptAnno-{ref_id}.body.tsv"
     output: "{data,[^/]+}/individuals/{subject}/wps/{ref_id,[^/]+}.tar"
     threads: 256
-    params: out_dir="{data}/individuals/{subject}/wps"
-    shell: """
-        scripts/expression/extractReadStartsFromBAM_Region_WPS.py \
-            --min_ins_size=120 --max_ins_size=180 \
-            -i {input.anno} \
-            -o '{params.out_dir}/{wildcards.ref_id}_%s.tsv.gz' \
-            -j {threads} \
-            -v {input.bam};
-        cd {params.out_dir} && \
-            tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \
-            rm -f {wildcards.ref_id}_*.tsv.gz;
-    """
+    params:
+        sub_script="scripts/expression/extractReadStartsFromBAM_Region_WPS.py",
+        out_dir="{data}/individuals/{subject}/wps"
+    run:
+        addwd(params, rule)
+        shell("""
+            {params.wd}/{params.sub_script} \
+                --min_ins_size=120 --max_ins_size=180 \
+                -i {input.anno} \
+                -o '{params.out_dir}/{wildcards.ref_id}_%s.tsv.gz' \
+                -j {threads} \
+                -v {input.bam};
+            cd {params.out_dir} && \
+                tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \
+                rm -f {wildcards.ref_id}_*.tsv.gz;
+        """)
 
 rule fft:
     """Convert window protection scores"""
@@ -25,20 +29,23 @@ rule fft:
     output: "{data,[^/]+}/individuals/{subject}/fft/{ref_id,[^/]+}.tar"
     threads: 256
     params:
+        sub_script="scripts/expression/fft_path.R"
         in_dir="{data}/individuals/{subject}/wps",
         out_dir="{data}/individuals/{subject}/fft"
-    shell: """
-        cwd=$(pwd);
-        cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
-        cd $cwd && (cd {params.in_dir}; \ls {wildcards.ref_id}_*.tsv.gz) | \
-            xargs -P{threads} -n 500 \
-            Rscript scripts/expression/fft_path.R \
-                {params.in_dir} {params.out_dir};
-        cd $cwd/{params.out_dir} && \
-            tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \
-            rm -f {wildcards.ref_id}_*.tsv.gz;
-        cd $cwd/{params.in_dir} && rm -f {wildcards.ref_id}_*.tsv.gz;
-    """
+    run:
+        addwd(params, rule)
+        shell("""
+            cwd=$(pwd);
+            cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
+            cd $cwd && (cd {params.in_dir}; \ls {wildcards.ref_id}_*.tsv.gz) | \
+                xargs -P{threads} -n 500 \
+                Rscript {params.wd}/{params.sub_script} \
+                    {params.in_dir} {params.out_dir};
+            cd $cwd/{params.out_dir} && \
+                tar cf {wildcards.ref_id}.tar {wildcards.ref_id}_*.tsv.gz && \
+                rm -f {wildcards.ref_id}_*.tsv.gz;
+            cd $cwd/{params.in_dir} && rm -f {wildcards.ref_id}_*.tsv.gz;
+        """)
 
 rule fft_summaries:
     """Calculate WPS, cov, starts for correlation analyses"""
@@ -48,20 +55,23 @@ rule fft_summaries:
         cov="{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_cov.tsv.gz",
         starts="{data,[^/]+}/fft_summaries/{ref_id}/fft_{subject}_starts.tsv.gz"
     params:
+        sub_script="scripts/expression/convert_files.py"
         in_dir="{data}/individuals/{subject}/fft",
         out_dir="{data}/fft_summaries",
         anno="{data}/annotations/transcriptAnno-{ref_id}.body.tsv"
-    shell: """
-        cwd=$(pwd);
-        cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
-        cd $cwd && scripts/expression/convert_files.py \
-            -a {params.anno} \
-            -t {params.in_dir} \
-            -s {wildcards.ref_id} \
-            -p . \
-            -i {wildcards.subject};
-        cd $cwd/{params.in_dir} && rm -f {wildcards.ref_id}_*.tsv.gz;
-    """
+    run:
+        addwd(params, rule)
+        shell("""
+            cwd=$(pwd);
+            cd {params.in_dir} && tar xf {wildcards.ref_id}.tar;
+            cd $cwd && {params.wd}/{params.sub_script} \
+                -a {params.anno} \
+                -t {params.in_dir} \
+                -s {wildcards.ref_id} \
+                -p . \
+                -i {wildcards.subject};
+            cd $cwd/{params.in_dir} && rm -f {wildcards.ref_id}_*.tsv.gz;
+        """)
 
 rule correlations:
     """Generate correlation plots and tables"""
@@ -71,19 +81,22 @@ rule correlations:
         corr_plot="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_correlation.pdf",
         corr_text="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_ave193-199bp_correlation.txt",
     params:
+        sub_script="scripts/expression/correlations.R"
         in_mask="{data}/fft_summaries/{ref_id}/fft_%s_WPS.tsv.gz",
         out_dir="{data}/correlations/{ref_id}/{subject}",
         rna_table="{data}/annotations/protein_atlas_rna_table.tsv",
         labels="metadata/expression_labels.txt"
-    shell: """
-        scripts/expression/correlations.R \
-            -m '{params.in_mask}' \
-            -i {wildcards.subject} \
-            -p {params.rna_table} \
-            -l {params.labels} \
-            -o {params.out_dir};
-        rm -f Rplots.pdf
-    """
+    run:
+        addwd(params, rule)
+        shell("""
+            {params.wd}/{params.sub_script} \
+                -m '{params.in_mask}' \
+                -i {wildcards.subject} \
+                -p {params.rna_table} \
+                -l {params.labels} \
+                -o {params.out_dir};
+            rm -f Rplots.pdf
+        """)
 
 rule correlation_ranks:
     """Generate correlation ranks"""
@@ -93,17 +106,20 @@ rule correlation_ranks:
     output:
         corr_rank="{data,[^/]+}/correlations/{ref_id}/{subject}/{subject}_by_{base}_ave193-199bp_correlation_rank.txt"
     params:
+        sub_script="scripts/expression/correlation_ranks.R"
         in_mask="{data}/fft_summaries/{ref_id}/fft_%s_WPS.tsv.gz",
         out_dir="{data}/correlations/{ref_id}/{subject}",
         rna_table="{data}/annotations/protein_atlas_rna_table.tsv",
         labels="metadata/expression_labels.txt"
-    shell: """
-        scripts/expression/correlation_ranks.R \
-            -m '{params.in_mask}' \
-            -r {wildcards.base} \
-            -i {wildcards.subject} \
-            -p {params.rna_table} \
-            -l {params.labels} \
-            -o {params.out_dir};
-        rm -f Rplots.pdf
-    """
+    run:
+        addwd(params, rule)
+        shell("""
+            {params.wd}/{params.sub_script} \
+                -m '{params.in_mask}' \
+                -r {wildcards.base} \
+                -i {wildcards.subject} \
+                -p {params.rna_table} \
+                -l {params.labels} \
+                -o {params.out_dir};
+            rm -f Rplots.pdf
+        """)

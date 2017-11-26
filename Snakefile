@@ -1,6 +1,11 @@
-from os.path import exists
+from os.path import exists, abspath, dirname
 from snakemake import WorkflowError
 from warnings import warn
+
+def addwd(target, rule):
+    """Getcwd within a rule. Will be moved to snakecharmer in the future."""
+    wd = abspath(dirname(getattr(rules, rule).snakefile))
+    setattr(target, "wd", wd)
 
 include: "feature/anno.snake"
 include: "feature/alignments.snake"
