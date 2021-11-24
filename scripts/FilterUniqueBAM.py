@@ -14,11 +14,11 @@ import sys
 import os
 import math
 import pysam
-from optparse import OptionParser,OptionGroup
-import string
-table = string.maketrans('TGCAMRWSYKVHDBtgcamrwsykvhdb','ACGTKYWSRMBDHVacgtkywsrmbdhv') # COMPLEMENT DNA
+from optparse import OptionParser, OptionGroup
 
-quality_offset =  33
+table = str.maketrans('TGCAMRWSYKVHDBtgcamrwsykvhdb', 'ACGTKYWSRMBDHVacgtkywsrmbdhv')  # COMPLEMENT DNA
+
+quality_offset = 33
 
 parser = OptionParser("%prog [options] BAMfile")
 parser.add_option("-p","--PIPE",dest="pipe",help="Read BAM from and write it to PIPE",default=False,action="store_true")
@@ -98,7 +98,7 @@ def calc_consensus(reads):
     # DETERMINE CONSENSUS SEQUENCE FOR THIS VARIANT
     if len(reads) > 1:
       seqstring,qualstring = "",""
-      for pos in xrange(len(reads[0].seq)):
+      for pos in range(len(reads[0].seq)):
         bases = [0,0,0,0]
         count = 0
         base,qualchr = None,None
@@ -140,7 +140,8 @@ def calc_consensus(reads):
         ofields = []
         for key,value in read.tags: # LOOK FOR PREVIOUS PCR DUPLICATE COUNTS
           if key == "XP": count += value
-          else: ofields.append((key,value))
+          else:
+            ofields.append((key,value))
       #sys.stderr.write('%s %s %s\n'%(read.seq==seqstring,read.seq,seqstring))
       if read.seq == seqstring:
         outread = read
@@ -164,20 +165,23 @@ def calc_consensus(reads):
     maxsumqual = 0
     for read in reads:
       nsum = sum(map(ord,read.qual))
-      if nsum  > maxsumqual:
+      if nsum > maxsumqual:
         outread = read
         maxsumqual = nsum
       if read.tags != None:
         ofields = []
         for key,value in read.tags: # LOOK FOR PREVIOUS PCR DUPLICATE COUNTS
           if key == "XP": count += value
-          else: ofields.append((key,value))
+          else:
+            ofields.append((key,value))
         outread.tags = ofields
     outread.qname = reads[0].qname
 
   outread.is_duplicate = False
-  if outread.tags == None: outread.tags = [("XP",count)]
-  else: outread.tags = outread.tags+[("XP",count)]
+  if outread.tags == None:
+    outread.tags = [("XP",count)]
+  else:
+    outread.tags = outread.tags+[("XP",count)]
 
   if options.frequency == None or count >= options.frequency:
     return outread
@@ -198,7 +202,7 @@ def get_consensus(reads):
     else:
       cigar_count[cigars]=1
       by_cigar[cigars]=([read1],[read2])
-  to_sort = map(lambda (x,y): (y,-len(str(x)),x),cigar_count.iteritems())
+  to_sort = map(lambda x,y: (y,-len(str(x)),x),cigar_count.iteritems())
   to_sort.sort()
   selcigar = to_sort[-1][-1]
   reads = by_cigar[selcigar]
@@ -223,7 +227,8 @@ def get_consensus(reads):
       forward.tags = new_tags1
       reverse.tags = new_tags2
       return forward,reverse
-    else: return None,None
+    else:
+      return None,None
   elif (forward.is_qcfail or reverse.is_qcfail) and not options.include_qcfail: return None,None
   else: return forward,reverse
 
@@ -242,7 +247,7 @@ def get_consensus_SR(reads):
     else:
       cigar_count[tcigar]=1
       by_cigar[tcigar]=[read]
-  to_sort = map(lambda (x,y): (y,-len(str(x)),x),cigar_count.iteritems())
+  to_sort = map(lambda x, y: (y,-len(str(x)),x),cigar_count.iteritems())
   to_sort.sort()
   selcigar = to_sort[-1][-1]
   reads = by_cigar[selcigar]
@@ -422,7 +427,8 @@ for filename in files:
             hvariants[(hchr,outpos,outpos_r2)]=reads
         if (len(hvariants) > 0) or (RG == cRG): variants[cRG] = hvariants
         else: del variants[cRG]
-      if options.verbose: sys.stderr.write("- Full buffer (%d)"%sum(map(len,variants.itervalues()))+str(curpos)+" \n")
+      if options.verbose:
+        sys.stderr.write("- Full buffer (%d)"%sum(map(len,variants.itervalues()))+str(curpos)+" \n")
 
     if read.is_paired: # PE DATA
       if read.mate_is_unmapped and options.keep:
@@ -443,7 +449,8 @@ for filename in files:
         else:
           read_r2,outpos_r2 = incomplete_variants[RG][read.qname]
           del incomplete_variants[RG][read.qname]
-          if outpos_r2[0] != hchr: hchr = hchr,outpos_r2[0]
+          if outpos_r2[0] != hchr:
+            hchr = hchr,outpos_r2[0]
           if (hchr,outpos,outpos_r2) not in variants[RG]:
             variants[RG][(hchr,outpos,outpos_r2)] = [(read,read_r2)]
           else:
@@ -569,14 +576,17 @@ if options.outnewconsensus != None:
   fastq_r2.close()
   if cfastq_PE == 0:
     outfilename = options.outdir+options.outnewconsensus+"_r1.fastq"
-    if options.verbose: sys.stderr.write("Removing empty file: %s\n"%outfilename)
+    if options.verbose:
+      sys.stderr.write("Removing empty file: %s\n"%outfilename)
     os.remove(outfilename)
     outfilename = options.outdir+options.outnewconsensus+"_r2.fastq"
-    if options.verbose: sys.stderr.write("Removing empty file: %s\n"%outfilename)
+    if options.verbose:
+      sys.stderr.write("Removing empty file: %s\n"%outfilename)
     os.remove(outfilename)
   if cfastq_SR == 0:
     outfilename = options.outdir+options.outnewconsensus+"_SR.fastq"
-    if options.verbose: sys.stderr.write("Removing empty file: %s\n"%outfilename)
+    if options.verbose:
+      sys.stderr.write("Removing empty file: %s\n"%outfilename)
     os.remove(outfilename)
 
 if options.verbose: 

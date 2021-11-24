@@ -6,7 +6,8 @@
 :Date: *30.04.2015
 """
 
-import sys, os
+import sys
+import os
 from optparse import OptionParser
 from sortedcontainers import SortedList
 import math
@@ -18,8 +19,9 @@ parser.add_option("-v","--verbose", dest="verbose", help="Turn on verbose messag
 (options, args) = parser.parse_args()
 
 windowSize = 1000
-halfWindow = windowSize//2
-windowValuesSorted = SortedList(load=int(math.sqrt(windowSize)))
+halfWindow = windowSize // 2
+windowValuesSorted = SortedList()
+windowValuesSorted._reset(load=int(math.sqrt(windowSize)))
 windowValues = []
 posInWindow = 0
 

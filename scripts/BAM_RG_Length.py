@@ -7,9 +7,9 @@
 :Date: *13.04.2012
 """
 
-import sys, os
+import os
 from optparse import OptionParser
-from collections import defaultdict 
+from collections import defaultdict
 import pysam
 
 parser = OptionParser("%prog [options]")
@@ -26,7 +26,7 @@ rgroups = {}
 
 for filename in args:
   if os.path.exists(filename):
-    print "Reading %s..."%filename
+    print(f"Reading {filename}...")
     cbamfile = pysam.Samfile(filename, "rb" )
     id2lib = {}
     if options.library and 'RG' in cbamfile.header:

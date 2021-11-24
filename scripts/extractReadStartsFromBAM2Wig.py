@@ -7,7 +7,8 @@
 :Date: *02.03.2015
 """
 
-import sys, os
+import sys
+import os
 from optparse import OptionParser
 from collections import defaultdict 
 
@@ -15,6 +16,7 @@ import pysam
 import gzip
 from bx.intervals.intersection import Intersecter, Interval
 import random
+
 
 def isSoftClipped(cigar):
   #Op BAM Description
@@ -28,14 +30,17 @@ def isSoftClipped(cigar):
   #= 7 sequence match
   #X 8 sequence mismatch
   for (op,count) in cigar:
-    if op in [4,5,6]: return True
+    if op in [4,5,6]:
+      return True
   return False
+
 
 def aln_length(cigarlist):
   tlength = 0
   for operation,length in cigarlist:
     if operation == 0 or operation == 2 or operation == 3 or operation >= 6: tlength += length
   return tlength
+
 
 def readIterator(filenames,options):
   if options.pipe or (len(filenames) == 0):
@@ -52,6 +57,7 @@ def readIterator(filenames,options):
         for read in input_file.fetch(chrom,start-1,end):
           yield read
         input_file.close()
+
 
 parser = OptionParser()
 parser.add_option("-r","--region", dest="region", help="Region to be looked up (def chr12:34,443,233-34,453,733)",default="chr12:34,443,233-34,453,733")
@@ -148,7 +154,6 @@ for pos in range(start,end+1):
      else: gcount +=1
   posRange[pos][2]+=gcount-bcount
 
-
 if options.coverage != "OFF":
   output = sys.stdout
   if options.coverage != "": output = gzip.open(options.coverage,'w')
@@ -156,22 +161,29 @@ if options.coverage != "OFF":
   for pos in range(start,end+1):
     output.write("%d\n"%(posRange[pos][0]))
   if options.coverage != "": output.close()
-  else: output.write("\n")
+  else:
+    output.write("\n")
 
 if options.starts != "OFF":
   output = sys.stdout
-  if options.starts != "": output = gzip.open(options.starts,'w')
+  if options.starts != "":
+    output = gzip.open(options.starts,'w')
   output.write("fixedStep chrom=chr%s start=%d step=1\n"%(outchrom,start))
   for pos in range(start,end+1):
     output.write("%d\n"%(posRange[pos][1]))
-  if options.starts != "": output.close()
-  else: output.write("\n")
+  if options.starts != "":
+    output.close()
+  else:
+    output.write("\n")
 
 if options.metric != "OFF":
   output = sys.stdout
-  if options.metric != "": output = gzip.open(options.metric,'w')
+  if options.metric != "":
+    output = gzip.open(options.metric,'w')
   output.write("fixedStep chrom=chr%s start=%d step=1\n"%(outchrom,start))
   for pos in range(start,end+1):
     output.write("%d\n"%(posRange[pos][2]))
-  if options.metric != "": output.close()
-  else: output.write("\n")
+  if options.metric != "":
+    output.close()
+  else:
+    output.write("\n")

@@ -16,11 +16,13 @@ from tqdm import tqdm
 
 table = str.maketrans("TGCA", "ACGT")
 
+
 def is_soft_clipped(cigar):
     for op, count in cigar:
         if op in [4,5,6]:
             return True
     return False
+
 
 def aln_len(cigarlist):
     tlength = 0
@@ -29,8 +31,10 @@ def aln_len(cigarlist):
             tlength += length
     return tlength
 
+
 def has_index(bamfile):
     return exists(bamfile.replace(".bam", ".bai")) or exists(bamfile + ".bai")
+
 
 def get_args():
     parser = OptionParser()
@@ -80,6 +84,7 @@ def get_args():
         options.region = ""
     return options, [bamfile for bamfile in args if exists(bamfile)]
 
+
 options, args = get_args()
 reference = Fastafile(options.reference)
 
@@ -116,6 +121,7 @@ if options.dinucleotides:
         for base2 in list("ACGT"):
             dinucleotides[True][base1+base2]=defaultdict(int)
             dinucleotides[False][base1+base2]=defaultdict(int)
+
 
 def is_meaningful(alignment):
     return not (
@@ -195,6 +201,7 @@ for bamfile in args:
                 sys.stderr.write("Maximum number of reads reached.\n")
                 break
 
+
 def get_outstr(threePrime, helper, base, subDict):
     primity = "ThreePrime" if threePrime else "FivePrime"
     tail = [
@@ -202,6 +209,7 @@ def get_outstr(threePrime, helper, base, subDict):
         for ind, x in sorted(subDict.items())
     ]
     return [primity, base] + tail
+
 
 with open(options.outfile, "w") as outfile:
     ranges = list(range(-20, 0)) + list(range(1, 21))
@@ -216,7 +224,7 @@ with open(options.outfile, "w") as outfile:
             print(*outstr, sep="\t", file=outfile)
     if options.dinucleotides:
         for threePrime in [True, False]:
-            helper = list(map(lambda k,v:v, sorted(dinucleotides[threePrime]["AA"].items())))
+            helper = list(map(lambda k, v: v, sorted(dinucleotides[threePrime]["AA"].items())))
             for base in dinucleotides[threePrime].keys():
                 if base == "AA":
                     continue

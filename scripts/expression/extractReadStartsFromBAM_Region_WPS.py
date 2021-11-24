@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Original author: Martin Kircher / mkircher@uw.edu / *03.06.2014"""
-
+#from IPython import embed
 from sys import stderr
 from os.path import exists
 from gzip import open as gzopen
@@ -71,7 +71,9 @@ ARG_RULES = {
     }
 }
 
-VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
+#VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
+VALID_CHROMS = set(["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX","chrY"])
+
 Region = namedtuple("Region", [
     "cid", "chrom", "region_start", "region_end", "strand"
 ])
@@ -236,7 +238,7 @@ def generate_region_file(bam_region, region, options):
 
 if __name__ == "__main__":
     options, bamfile = get_arguments(ARG_RULES)
-    with Samfile(bamfile, "rb") as bam, open(options.input) as anno:
+    with Samfile(bamfile,check_sq = False) as bam, open(options.input) as anno:
         Parallel(n_jobs=options.jobs)(
             delayed(generate_region_file)(bam_region, region, options)
             for region, bam_region in valid_regions(anno, bam, options)

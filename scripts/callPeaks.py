@@ -6,7 +6,7 @@
 :Date: *13.04.2015
 """
 
-import sys, os
+import sys
 from optparse import OptionParser
 import math
 from sortedcontainers import SortedList
@@ -19,14 +19,15 @@ parser.add_option("-d","--debug", dest="debug", help="Turn debug mode on (produc
 
 minlength = 50
 maxlength = 150
-chromNames = map(str,range(1,23))
+chromNames = list(map(str, range(1, 23)))
 chromNames.append("X")
 chromNames.append("Y")
 chromNames = set(chromNames)
 
 windowSize = 1000
-halfWindow = windowSize//2
-windowValuesSorted = SortedList(load=int(math.sqrt(windowSize)))
+halfWindow = windowSize // 2
+windowValuesSorted = SortedList()
+windowValuesSorted._reset(load=int(math.sqrt(windowSize)))
 windowValues = []
 posInWindow = 0
 
@@ -157,7 +158,7 @@ def evaluateValues(chrom,start,end,values,report = True):
     #sys.stdout.write("%s\t%d\t%d\t%d\n"%(chrom,start,end,len(values)))
   if (maxlength >= len(values) >= minlength):
     cMed = median(values)
-    res = filter(lambda (x,y): y >= cMed, zip(range(start,end+1),values))
+    res = filter(lambda x, y: y >= cMed, zip(range(start, end + 1), values))
     res = continousWindows(res)
     res.sort()
     score,cstart,cend,cval = res[-1]
@@ -167,7 +168,7 @@ def evaluateValues(chrom,start,end,values,report = True):
   
   elif (3*maxlength >= len(values) >= maxlength):
     cMed = median(values)
-    res = filter(lambda (x,y): y >= cMed, zip(range(start,end+1),values))
+    res = filter(lambda x, y: y >= cMed, zip(range(start, end + 1), values))
     for (score,cstart,cend,cval) in continousWindows(res):
       if (maxlength >= (cend-cstart+1) >= minlength):
         if (chrom in chromNames) and report and (cval > variCutoff):

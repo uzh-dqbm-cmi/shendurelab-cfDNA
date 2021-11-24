@@ -14,6 +14,7 @@ import pysam
 import gzip
 from optparse import OptionParser
 from collections import defaultdict
+#from IPython import embed
 
 parser = OptionParser()
 parser.add_option("-i","--individual", dest="individual", help="Individual to use (comma-separate, def 'A11')",default="A11")
@@ -30,9 +31,9 @@ tempDir = options.temp
 project = options.project
 ind = options.individual
 
-outfileCov = gzip.open("data/fft_summaries/%s/fft_%s_cov.tsv.gz"%(options.suffix,ind),'wt')
-outfileStarts = gzip.open("data/fft_summaries/%s/fft_%s_starts.tsv.gz"%(options.suffix,ind),'wt')
-outfileWPS = gzip.open("data/fft_summaries/%s/fft_%s_WPS.tsv.gz"%(options.suffix,ind),'wt')
+outfileCov = gzip.open("%s/%s/fft_summaries%s/fft_%s_cov.tsv.gz"%(rootDir,project,options.suffix,ind),'wt')
+outfileStarts = gzip.open("%s/%s/fft_summaries%s/fft_%s_starts.tsv.gz"%(rootDir,project,options.suffix,ind),'wt')
+outfileWPS = gzip.open("%s/%s/fft_summaries%s/fft_%s_WPS.tsv.gz"%(rootDir,project,options.suffix,ind),'wt')
 
 geneIDs = set()
 if os.path.exists(options.annotation):
@@ -44,20 +45,22 @@ if os.path.exists(options.annotation):
 
 wrote_header = False
 for cid in sorted(geneIDs):
-  if os.path.exists(tempDir + "/" + "%s_%s.tsv.gz"%(options.suffix,cid)):
+  if os.path.exists(tempDir + "/" + "%sblock_%s.tsv.gz"%(options.suffix,cid)):
     if not wrote_header:
       header = ['#Region']
-      infile = gzip.open(tempDir + "/" + "%s_%s.tsv.gz"%(options.suffix,cid), "rt")
+      infile = gzip.open(tempDir + "/" + "%sblock_%s.tsv.gz"%(options.suffix,cid), "rt")
       infile.readline()
       for line in infile:
         fields = line.split()
         header.append(fields[0])
       infile.close()
+      header = list(map(lambda t: t.decode("utf-8") if not isinstance(t, str) else t, header))
+      #header = list(map(lambda t: bytes(t, "utf-8"), header))
       outfileCov.write("\t".join(header)+"\n")
       outfileStarts.write("\t".join(header)+"\n")
       outfileWPS.write("\t".join(header)+"\n")
       wrote_header=True
-    infile = gzip.open(tempDir + "/" + "%s_%s.tsv.gz"%(options.suffix,cid), "rt")
+    infile = gzip.open(tempDir + "/" + "%sblock_%s.tsv.gz"%(options.suffix,cid), "rt")
     covs = [cid]
     starts = [cid]
     wps = [cid]
@@ -68,6 +71,9 @@ for cid in sorted(geneIDs):
       starts.append(fields[2])
       wps.append(fields[3])
     infile.close()
+    covs = list(map(lambda t: t.decode("utf-8") if not isinstance(t, str) else t, covs))
+    starts = list(map(lambda t: t.decode("utf-8") if not isinstance(t, str) else t, starts))
+    wps = list(map(lambda t: t.decode("utf-8") if not isinstance(t, str) else t, wps))
     outfileCov.write("\t".join(covs)+"\n")
     outfileStarts.write("\t".join(starts)+"\n")
     outfileWPS.write("\t".join(wps)+"\n")

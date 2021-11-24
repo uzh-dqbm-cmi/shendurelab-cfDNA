@@ -6,13 +6,14 @@
 :Date: *14.04.2015
 """
 
-import sys, os
+import sys
+import os
 from optparse import OptionParser
 import pysam
 import string
 from collections import defaultdict
 
-table = string.maketrans('TGCA','ACGT') # COMPLEMENT DNA
+table = str.maketrans('TGCA','ACGT') # COMPLEMENT DNA
 
 def isSoftClipped(cigar):
   #Op BAM Description
