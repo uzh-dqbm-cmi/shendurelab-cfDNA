@@ -142,7 +142,7 @@ def calc_consensus(reads):
           if key == "XP": count += value
           else:
             ofields.append((key,value))
-      #sys.stderr.write('%s %s %s\n'%(read.seq==seqstring,read.seq,seqstring))
+      #sys.stderr.write(f'{read.seq==seqstring} {read.seq} {seqstring}\n')
       if read.seq == seqstring:
         outread = read
         outread.qname = reads[0].qname
@@ -150,10 +150,10 @@ def calc_consensus(reads):
         if ofields != None: outread.tags = ofields
     if outread == None: # CONSENSUS SEQUENCE DOES NOT MATCH ONE OF THE ORIGINAL READS: WE DO NOT KNOW THAT READ IS STILL ALIGNED CORRECTLY!
       #if options.verbose:
-        #sys.stderr.write('Consensus sequence does not match one of the original %d reads.\n'%(len(reads)))
-        #sys.stderr.write('%s   %s\n'%(seqstring,qualstring))
+        #sys.stderr.write(f'Consensus sequence does not match one of the original {len(reads)} reads.\n')
+        #sys.stderr.write(f'{seqstring}   {qualstring}\n')
         #for read in reads:
-          #sys.stderr.write('%s   %s\n'%(read.seq,read.qual))
+          #sys.stderr.write(f'{read.seq}   {read.qual}\n')
       outread = reads[0]
       outread.is_unmapped = True
       outread.mapq = minmapq
@@ -285,14 +285,14 @@ else:
 cfastq_SR, cfastq_PE = 0,0
 if options.outnewconsensus != None:
   outfilename = options.outdir+options.outnewconsensus+"_SR.fastq"
-  if options.verbose: sys.stderr.write("Creating: %s\n"%outfilename)
-  fastq_SR = open(outfilename,'w')
+  if options.verbose: sys.stderr.write(f"Creating: {outfilename}\n")
+  fastq_SR = open(outfilename, 'w')
   outfilename = options.outdir+options.outnewconsensus+"_r1.fastq"
-  if options.verbose: sys.stderr.write("Creating: %s\n"%outfilename)
-  fastq_r1 = open(outfilename,'w')
+  if options.verbose: sys.stderr.write(f"Creating: {outfilename}\n")
+  fastq_r1 = open(outfilename, 'w')
   outfilename = options.outdir+options.outnewconsensus+"_r2.fastq"
-  if options.verbose: sys.stderr.write("Creating: %s\n"%outfilename)
-  fastq_r2 = open(outfilename,'w')
+  if options.verbose: sys.stderr.write(f"Creating: {outfilename}\n")
+  fastq_r2 = open(outfilename, 'w')
 
 ## CREATE OUTPUT FILE(S)/STREAM
 fileflags = 'wb'
@@ -330,13 +330,13 @@ for filename in files:
       if options.verbose: sys.stderr.write("BAM/SAM output on stdout...\n")
     else:
       outfilename = options.outdir+options.outprefix+".bam"
-      if options.verbose: sys.stderr.write("Creating: %s\n"%outfilename)
-      outfile = pysam.Samfile( outfilename , fileflags, template = infile)
+      if options.verbose: sys.stderr.write(f"Creating: {outfilename}\n")
+      outfile = pysam.Samfile(outfilename, fileflags, template=infile)
 
     if ('HD' in outfile.header) and ('SO' in outfile.header['HD']):
       outfile.header['HD']['SO'] = 'unsorted'
     else:
-      outfile.header['HD'] = {'VN': '1.4','SO':'unsorted'}
+      outfile.header['HD'] = {'VN': '1.4', 'SO': 'unsorted'}
 
   lcheck = None,None
   variants = {}
@@ -352,7 +352,7 @@ for filename in files:
     if options.fixID: read.qname = read.qname.split('/')[0]
     total_reads += 1
     if options.verbose and total_reads % 100000 == 0: 
-      sys.stderr.write("Reads in %d / PCR dups out %d PE | %d SR / Unmapped out %d / FastQ realignment %d PE | %d SR ( %.2f%% ; current pos: %s)\n"%(total_reads,out_reads,out_reads_SR,out_reads_kept,cfastq_PE,cfastq_SR,(out_reads*2+out_reads_SR+out_reads_kept+cfastq_SR+cfastq_PE*2)/float(total_reads)*100,str(curpos)))
+      sys.stderr.write(f"Reads in %d / PCR dups out %d PE | %d SR / Unmapped out %d / FastQ realignment %d PE | %d SR ( %.2f%% ; current pos: %s)\n"%(total_reads,out_reads,out_reads_SR,out_reads_kept,cfastq_PE,cfastq_SR,(out_reads*2+out_reads_SR+out_reads_kept+cfastq_SR+cfastq_PE*2)/float(total_reads)*100,str(curpos)))
 
     if read.is_qcfail and not options.include_qcfail and not options.rescue_qcfail: 
       #if options.verbose: sys.stderr.write("QC FAIL\n")

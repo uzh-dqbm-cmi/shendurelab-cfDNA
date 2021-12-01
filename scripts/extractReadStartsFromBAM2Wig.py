@@ -51,7 +51,7 @@ def readIterator(filenames,options):
     input_file.close()
   else:
     for bamfile in filenames:
-      if options.verbose: sys.stderr.write("Reading %s\n"%bamfile)
+      if options.verbose: sys.stderr.write(f"Reading {bamfile}\n")
       if os.path.exists(bamfile) and (os.path.exists(bamfile.replace(".bam",".bai")) or os.path.exists(bamfile+".bai")):
         input_file = pysam.Samfile( bamfile, "rb" )
         for read in input_file.fetch(chrom,start-1,end):
@@ -81,12 +81,12 @@ try:
   start,end = map(int,options.region.split(':')[1].replace(",","").split("-"))
   outchrom = chrom
   outchrom = outchrom.replace("chr","")
-  if outchrom.startswith('gi|'): # gi|224589803|ref|NC_000012.11|
+  if outchrom.startswith('gi|'):  # gi|224589803|ref|NC_000012.11|
     NCfield = outchrom.split("|")[-2]
     if NCfield.startswith("NC"):
-      outchrom = "%d"%(int(NCfield.split(".")[0].split("_")[-1]))
+      outchrom = f'{int(NCfield.split(".")[0].split("_")[-1])}'
   if options.verbose: 
-    sys.stderr.write("Coordinates parsed: Chrom %s Start %d End %d\n"%(chrom,start,end))
+    sys.stderr.write(f"Coordinates parsed: Chrom {chrom} Start {start} End {end}\n")
 except:
   sys.stderr.write("Error: Region not defined in a correct format!")
   sys.exit()
@@ -157,9 +157,9 @@ for pos in range(start,end+1):
 if options.coverage != "OFF":
   output = sys.stdout
   if options.coverage != "": output = gzip.open(options.coverage,'w')
-  output.write("fixedStep chrom=chr%s start=%d step=1\n"%(outchrom,start))
+  output.write(f"fixedStep chrom=chr{outchrom} start={start} step=1\n")
   for pos in range(start,end+1):
-    output.write("%d\n"%(posRange[pos][0]))
+    output.write(f"{posRange[pos][0]}\n")
   if options.coverage != "": output.close()
   else:
     output.write("\n")
@@ -167,10 +167,10 @@ if options.coverage != "OFF":
 if options.starts != "OFF":
   output = sys.stdout
   if options.starts != "":
-    output = gzip.open(options.starts,'w')
-  output.write("fixedStep chrom=chr%s start=%d step=1\n"%(outchrom,start))
+    output = gzip.open(options.starts, 'w')
+  output.write(f"fixedStep chrom=chr{outchrom} start={start} step=1\n")
   for pos in range(start,end+1):
-    output.write("%d\n"%(posRange[pos][1]))
+    output.write(f"{posRange[pos][1]}\n")
   if options.starts != "":
     output.close()
   else:
@@ -179,10 +179,10 @@ if options.starts != "OFF":
 if options.metric != "OFF":
   output = sys.stdout
   if options.metric != "":
-    output = gzip.open(options.metric,'w')
-  output.write("fixedStep chrom=chr%s start=%d step=1\n"%(outchrom,start))
+    output = gzip.open(options.metric, 'w')
+  output.write(f"fixedStep chrom=chr{outchrom} start={start} step=1\n")
   for pos in range(start,end+1):
-    output.write("%d\n"%(posRange[pos][2]))
+    output.write(f"{posRange[pos][2]}\n")
   if options.metric != "":
     output.close()
   else:

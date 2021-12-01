@@ -100,14 +100,17 @@ def quantiles(values,points):
       res.append((helper[int(round(lVal*point))]+helper[int(lVal*point)])*0.5)
   return res
 
+
 def median(values):
   return quantiles(values,[0.5])[0]
+
 
 def medianS(sortedValues):
   if len(sortedValues) % 2 == 0:
     return 0.5*(sortedValues[len(sortedValues)//2]+sortedValues[len(sortedValues)//2-1])
   else:
     return sortedValues[len(sortedValues)//2]
+
 
 def quantileS(sortedValues,points):
   res = []
@@ -118,6 +121,7 @@ def quantileS(sortedValues,points):
     else:
       res.append((sortedValues[int(round(lVal*point))]+sortedValues[int(lVal*point)])*0.5)
   return res
+
 
 def continousWindows(region):
   res = []
@@ -151,11 +155,12 @@ def continousWindows(region):
     res.append((csum,cstart,cend,cmax)) # int(round(sum(cmaxPos)/float(len(cmaxPos)))),
   return res
 
+
 def evaluateValues(chrom,start,end,values,report = True):
   global minlength, maxlength, variCutoff
   global chromNames
   #if start != None:
-    #sys.stdout.write("%s\t%d\t%d\t%d\n"%(chrom,start,end,len(values)))
+    #sys.stdout.write(f"{chrom}\t{start}\t{end}\t{len(values)}\n")
   if (maxlength >= len(values) >= minlength):
     cMed = median(values)
     res = filter(lambda x, y: y >= cMed, zip(range(start, end + 1), values))
@@ -164,7 +169,7 @@ def evaluateValues(chrom,start,end,values,report = True):
     score,cstart,cend,cval = res[-1]
     if (chrom in chromNames) and report and (cval > variCutoff):
       cmiddle = cstart+round((cend-cstart)*0.5)
-      sys.stdout.write("chr%s\t%d\t%d\t%s:%d-%d\t%d\t+\t%d\t%d\n"%(chrom,cstart-1,cend,chrom,cstart,cend,cval,cmiddle-1,cmiddle))
+      sys.stdout.write(f"chr{chrom}\t{cstart-1}\t{cend}\t{chrom}:{cstart}-{cend}\t{cval}\t+\t{cmiddle-1}\tcmiddle\n")
   
   elif (3*maxlength >= len(values) >= maxlength):
     cMed = median(values)
@@ -173,7 +178,7 @@ def evaluateValues(chrom,start,end,values,report = True):
       if (maxlength >= (cend-cstart+1) >= minlength):
         if (chrom in chromNames) and report and (cval > variCutoff):
           cmiddle = cstart+round((cend-cstart)*0.5)
-          sys.stdout.write("chr%s\t%d\t%d\t%s:%d-%d\t%d\t+\t%d\t%d\n"%(chrom,cstart-1,cend,chrom,cstart,cend,cval,cmiddle-1,cmiddle))
+          sys.stdout.write(f"chr{chrom}\t{cstart-1}\t{cend}\t{chrom}:{cstart}-{cend}\t{cval}\t+\t{cmiddle-1}\t{cmiddle}\n")
         
 chrom = "1"
 pos = 0
@@ -211,7 +216,7 @@ for line in sys.stdin:
             ivalue = windowValues[posInWindow]-windowMedian
           ipos = pos-windowSize+posInWindow+1
           if options.debug:
-            sys.stdout.write("%s\t%d\t%.1f\t%.1f\t(%d)\n"%(chrom,ipos,ivalue,windowValues[posInWindow],posInWindow))
+            sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.1f}\t{windowValues[posInWindow]:.1f}\t({posInWindow})\n")
           #print chrom,ipos,ivalue
           if ivalue > 0:
             if (cend != None) and (ipos <= (cend+5*step)):
@@ -269,7 +274,7 @@ for line in sys.stdin:
             ivalue = windowValues[posInWindow]-windowMedian
           ipos = pos-windowSize+posInWindow
           if options.debug:
-            sys.stdout.write("%s\t%d\t%.1f\t%.1f\t(%d)\n"%(chrom,ipos,ivalue,windowValues[posInWindow],posInWindow))
+            sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.1f}\t{windowValues[posInWindow]:.1f}\t({posInWindow})\n")
           #print chrom,ipos,ivalue
           if ivalue > 0:
             if (cend != None) and (ipos <= (cend+5*step)):
@@ -304,7 +309,7 @@ for line in sys.stdin:
         ivalue = windowValues[posInWindow]-windowMedian
       ipos = pos-windowSize+posInWindow+1
       if options.debug:
-        sys.stdout.write("%s\t%d\t%.1f\t%.1f\t(%d)\n"%(chrom,ipos,ivalue,windowValues[posInWindow],posInWindow))
+        sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.1f}\t{windowValues[posInWindow]:.1f}\t({posInWindow})\n")
       #print chrom,ipos,ivalue
       if ivalue > 0:
         if (cend != None) and (ipos <= (cend+5*step)):
@@ -339,7 +344,7 @@ if (len(windowValues) == windowSize):
       ivalue = windowValues[posInWindow]-windowMedian
     ipos = pos-windowSize+posInWindow+1
     if options.debug:
-      sys.stdout.write("%s\t%d\t%d\t%.1f\t(%d)\n"%(chrom,ipos,ivalue,windowValues[posInWindow],posInWindow))
+      sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue}\t{windowValues[posInWindow]:.1f}\t({posInWindow})\n")
     #print chrom,ipos,ivalue
     if ivalue > 0:
       if (cend != None) and (ipos <= (cend+5*step)):

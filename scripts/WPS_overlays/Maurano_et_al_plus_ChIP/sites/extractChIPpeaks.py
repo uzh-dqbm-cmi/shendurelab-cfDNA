@@ -30,12 +30,12 @@ parser = OptionParser()
 #TCF-LEF -> TCF/LEF -> TCF7L2,TCF3
 #YY1 -> YY1 -> YY1
 
-factorAssignment = { 'CTCF':['CTCF_Core/2'], 'TFAP2A':['AP-2','AP-2/2'], 'TFAP2C':['AP-2','AP-2/2'], 'E2F1':['E2F/2'], 'E2F4':['E2F/2'],  'EBF1':['EBF1'], 'TCF3':['Ebox','Ebox/CACCTG','TCF/LEF'], 'TAL1':['Ebox'], 'ESR1':['ESR1'], 'ETS1':['ETS'], 'ELF1':['ETS'], 'ELK1':['ETS'], 'ELK4':['ETS'], 'STAT1':['ETS'], 'STAT2':['ETS'], 'STAT3':['ETS'], 'GABPA':['ETS'], 'SPI1':['ETS'], 'IRF1':['IRF'], 'STAT1':['IRF'], 'PRDM1':['IRF'], 'IRF3':['IRF/2','IRF/3'], 'MAFK':['MAFK'], 'MEF2A':['MEF2A','MEF2A/2'], 'MYC':['MYC/MAX'], 'MAX':['MYC/MAX'], 'USF1':['MYC/MAX'], 'USF2':['MYC/MAX'], 'SREBP1':['MYC/MAX'], 'PAX5':['PAX5/2'], 'RUNX3':['RUNX2','RUNX/AML'], 'ZNF143':['STAF/2'], 'TCF7L2':['TCF/LEF'], 'YY1':['YY1'] }
+factorAssignment = {'CTCF':['CTCF_Core/2'], 'TFAP2A':['AP-2','AP-2/2'], 'TFAP2C':['AP-2','AP-2/2'], 'E2F1':['E2F/2'], 'E2F4':['E2F/2'],  'EBF1':['EBF1'], 'TCF3':['Ebox','Ebox/CACCTG','TCF/LEF'], 'TAL1':['Ebox'], 'ESR1':['ESR1'], 'ETS1':['ETS'], 'ELF1':['ETS'], 'ELK1':['ETS'], 'ELK4':['ETS'], 'STAT1':['ETS'], 'STAT2':['ETS'], 'STAT3':['ETS'], 'GABPA':['ETS'], 'SPI1':['ETS'], 'IRF1':['IRF'], 'STAT1':['IRF'], 'PRDM1':['IRF'], 'IRF3':['IRF/2','IRF/3'], 'MAFK':['MAFK'], 'MEF2A':['MEF2A','MEF2A/2'], 'MYC':['MYC/MAX'], 'MAX':['MYC/MAX'], 'USF1':['MYC/MAX'], 'USF2':['MYC/MAX'], 'SREBP1':['MYC/MAX'], 'PAX5':['PAX5/2'], 'RUNX3':['RUNX2','RUNX/AML'], 'ZNF143':['STAF/2'], 'TCF7L2':['TCF/LEF'], 'YY1':['YY1'] }
 
 outfiles = {}
-for key,value in factorAssignment.iteritems():
+for key,value in factorAssignment.items():
   for factor in value:
-    if factor not in outfiles: outfiles[factor] = open("%s.peaks"%(factor.replace("/","-")),'w')
+    if factor not in outfiles: outfiles[factor] = open(f'{factor.replace("/", "-").peaks}', 'w')
 
 infile = gzip.open("data/ENCODE_TfbsClusteredV3/tfbs.v3.tsv.gz")
 for line in infile:
@@ -44,5 +44,5 @@ for line in infile:
     for elem in factorAssignment[fields[3]]:
       outfiles[elem].write(line)
 
-for key,value in outfiles.iteritems():
+for key, value in outfiles.items():
   value.close()

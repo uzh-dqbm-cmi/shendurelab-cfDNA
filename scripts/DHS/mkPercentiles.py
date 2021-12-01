@@ -32,4 +32,4 @@ for line in allS:
             break
         i += 1
 
-    print "chr"+parts[0] + "\t" + parts[1] +"\t"+ parts[2] + "\t" + name + "\t" + parts[3] + "\t+\t" + str(mid) + "\t" + str(i)
+    print(f"chr{parts[0]}\t{parts[1]}\t{parts[2]}\t{name}\t{parts[3]}\t\t{str(mid)}\t{i}")

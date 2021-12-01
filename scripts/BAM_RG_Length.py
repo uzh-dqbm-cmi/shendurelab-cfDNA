@@ -54,14 +54,15 @@ for filename in args:
           rgroups[library][1][length]+=count
 
 for library in rgroups:
-  if library != '': outfile = open("%s_%s.tsv"%(options.prefix.rstrip("_"),library),'w')
-  else: outfile = open("%s.tsv"%(options.prefix),'w')
+  if library != '':
+    outfile = open(f'{options.prefix.rstrip("_")}_{library}.tsv', 'w')
+  else: outfile = open(f"{options.prefix}.tsv", 'w')
   if have_XP:
     outfile.write('Length\tCounts\tInclDuplicates\n')
     for length in range(min(rgroups[library][0].keys()),max(rgroups[library][0].keys())+1):
-      outfile.write("%d\t%d\t%d\n"%(length,rgroups[library][0][length],rgroups[library][1][length]))
+      outfile.write(f"{length}\t{rgroups[library][0][length]}\t{rgroups[library][1][length]}\n")
   else:
     outfile.write('Length\tCounts\n')
     for length in range(min(rgroups[library][0].keys()),max(rgroups[library][0].keys())+1):
-      outfile.write("%d\t%d\n"%(length,rgroups[library][0][length]))
+      outfile.write(f"{length}\t{rgroups[library][0][length]}\n")
   outfile.close()

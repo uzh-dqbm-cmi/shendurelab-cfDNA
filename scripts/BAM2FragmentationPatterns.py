@@ -99,9 +99,9 @@ if len(options.region):
         if outchrom.startswith("gi|"):
             NCfield = outchrom.split("|")[-2]
             if NCfield.startswith("NC"):
-                outchrom = "%d"%(int(NCfield.split(".")[0].split("_")[-1]))
+                outchrom = str(int(NCfield.split(".")[0].split("_")[-1]))
         if options.verbose:
-            sys.stderr.write("Coordinates parsed: Chrom %s Start %d End %d\n"%(chrom,start,end))
+            sys.stderr.write(f"Coordinates parsed: Chrom {chrom} Start {start} End {end}\n")
     except:
         sys.stderr.write("Error: Region not defined in a correct format!\n")
         sys.exit()
@@ -205,7 +205,7 @@ for bamfile in args:
 def get_outstr(threePrime, helper, base, subDict):
     primity = "ThreePrime" if threePrime else "FivePrime"
     tail = [
-        "NA" if helper[ind] == 0 else "%.4f"%(x/float(helper[ind]))
+        "NA" if helper[ind] == 0 else f"{x/float(helper[ind]):.4f}"
         for ind, x in sorted(subDict.items())
     ]
     return [primity, base] + tail

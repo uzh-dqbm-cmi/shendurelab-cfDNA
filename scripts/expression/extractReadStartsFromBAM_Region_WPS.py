@@ -71,8 +71,9 @@ ARG_RULES = {
     }
 }
 
-#VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
-VALID_CHROMS = set(["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX","chrY"])
+# VALID_CHROMS = set(map(str,list(range(1,23))+["X","Y"]))
+VALID_CHROMS = {"chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12" ,
+                "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"}
 
 Region = namedtuple("Region", [
     "cid", "chrom", "region_start", "region_end", "strand"
@@ -83,11 +84,13 @@ Read = namedtuple("Read", [
     "pnext", "pos", "qlen", "qname", "rnext", "start", "tid"
 ])
 
+
 def is_soft_clipped(cigar):
     for op, count in cigar:
         if op in [4, 5, 6]:
             return True
     return False
+
 
 def aln_length(cigarlist):
     tlength = 0
@@ -96,9 +99,11 @@ def aln_length(cigarlist):
             tlength += length
     return tlength
 
+
 def log_action(message, verbosity=True):
     if verbosity:
         print(message, file=stderr)
+
 
 def get_arguments(arg_rules):
     parser = OptionParser()
@@ -120,11 +125,13 @@ def get_arguments(arg_rules):
         options.min_ins_size, options.max_ins_size = None, None
     return options, bamfile
 
+
 def pickleable_region(bam_fetch):
     return [
         Read(*[getattr(read, attr, None) for attr in Read._fields])
         for read in bam_fetch
     ]
+
 
 def valid_regions(anno, bam, options):
     for line in anno:
@@ -138,12 +145,14 @@ def valid_regions(anno, bam, options):
             bam_region = pickleable_region(bam_fetch)
             yield region, bam_region
 
+
 def filter_reads(bam_region, chrom, region_start, region_end, options):
     for read in bam_region:
         if (not options.downsample) or (random() < options.downsample):
             if not (read.is_duplicate or read.is_qcfail or read.is_unmapped):
                 if not is_soft_clipped(read.cigar):
                     yield read
+
 
 def is_valid_paired(r, region_start, options):
     if r.is_paired and (not r.mate_is_unmapped) and (r.rnext == r.tid):
@@ -156,6 +165,7 @@ def is_valid_paired(r, region_start, options):
                     return True
     return False
 
+
 def is_valid_single(r, options):
     if (options.min_ins_size == None):
         return True
@@ -164,22 +174,27 @@ def is_valid_single(r, options):
     else:
         return False
 
+
 def as_merged(r, options):
     return options.merged or r.qname.startswith("M_")
+
 
 def as_trimmed(r, options):
     if (options.trimmed or r.qname.startswith("T_")):
         return r.qlen <= options.length_sr - 10
     return False
 
+
 def inc_pr(pos_range, rstart, rend, region_start, region_end):
     for i in range(rstart, rend + 1):
         if region_start <= i <= region_end:
             pos_range[i][0] += 1
 
+
 def inc_pr_at(pos_range, at, region_start, region_end):
     if region_start <= at <= region_end:
         pos_range[at][1] += 1
+
 
 def get_reads_and_ranges(bam_region, cid, chrom, region_start, region_end, strand, options):
     pos_range = defaultdict(lambda: [0,0])
@@ -210,6 +225,7 @@ def get_reads_and_ranges(bam_region, cid, chrom, region_start, region_end, stran
                 inc_pr_at(pos_range, rstart, region_start, region_end)
     return filtered_reads, pos_range
 
+
 def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, strand, options):
     cov_sites = 0
     wps_list = []
@@ -226,15 +242,17 @@ def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, str
         wps_list.append([chrom, pos, cov_count, start_count, gcount - bcount])
     return wps_list, cov_sites
 
+
 def generate_region_file(bam_region, region, options):
     reads, pos_range = get_reads_and_ranges(bam_region, *region, options)
     wps_list, cov_sites = get_wps(reads, pos_range, *region, options)
     if cov_sites or options.empty:
         if region.strand == "-":
             wps_list = reversed(wps_list)
-        with gzopen(options.outfile%region.cid, "wt") as wps_handle:
+        with gzopen(options.outfile.format(region.cid), "wt") as wps_handle:
             for line in wps_list:
                 print(*line, sep="\t", file=wps_handle)
+
 
 if __name__ == "__main__":
     options, bamfile = get_arguments(ARG_RULES)

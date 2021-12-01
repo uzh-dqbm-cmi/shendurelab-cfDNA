@@ -30,11 +30,11 @@ parser = OptionParser()
 #TCF-LEF -> TCF/LEF -> TCF7L2,TCF3
 #YY1 -> YY1 -> YY1
 
-factors = set(['CTCF_Core/2','AP-2','AP-2/2','E2F/2','EBF1','Ebox','Ebox/CACCTG','ESR1','ETS','IRF','IRF/2','IRF/3','MAFK','MEF2A','MEF2A/2','MYC/MAX','PAX5/2','RUNX2','RUNX/AML','STAF/2','TCF/LEF','YY1'])
+factors = {'CTCF_Core/2','AP-2','AP-2/2','E2F/2','EBF1','Ebox','Ebox/CACCTG','ESR1','ETS','IRF','IRF/2','IRF/3','MAFK','MEF2A','MEF2A/2','MYC/MAX','PAX5/2','RUNX2','RUNX/AML','STAF/2','TCF/LEF','YY1'}
 
 outfiles = {}
 for factor in factors:
-  outfiles[factor] = open("%s.sites"%(factor.replace("/","-")),'w')
+  outfiles[factor] = open(f'{factor.replace("/","-")}.sites','w')
 
 infile = gzip.open("data/Maurano_et_al_func_var/hg19.taipale.recluster.bed.gz")
 for line in infile:

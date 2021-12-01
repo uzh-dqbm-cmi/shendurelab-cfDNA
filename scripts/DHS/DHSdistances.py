@@ -116,8 +116,9 @@ for count in range(1, 23):
         # okay, now calculate the distance between the two
         totaldistance = minpos + minneg - 1
         
-                
-        print "%s\t%s\t%s\t%d\t%d\t%d\t%s" % (chrom, otherIntervals[chrom+":"+str(otherPeaks[chrom][otheri])].split(":")[1], otherIntervals[chrom+":"+str(otherPeaks[chrom][otheri])].split(":")[2], minneg, minpos, totaldistance, otherPercs[chrom+":"+str(otherPeaks[chrom][otheri])])
+        print(f'{chrom}\t{otherIntervals[chrom+":"+str(otherPeaks[chrom][otheri])].split(":")[1]}\t'
+              f'{otherIntervals[chrom+":"+str(otherPeaks[chrom][otheri])].split(":")[2]}\t{minneg}\t{minpos}\t'
+              f'{totaldistance}\t{otherPercs[chrom+":"+str(otherPeaks[chrom][otheri])]}')
         allj = nextj
         otheri += 1
 

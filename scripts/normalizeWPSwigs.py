@@ -58,7 +58,7 @@ while cline != '' or wpsline != '':
 
   #count += 1
   #if count % 100000 == 0:
-    #sys.stderr.write("Read %d lines; %d %d\n"%(count,len(windowValuesSorted),len(windowValues)))
+    #sys.stderr.write(f"Read {count} lines; {len(windowValuesSorted)} {len(windowValues)}\n")
 
   # A new WIG region starts
   if wpsline.startswith("fixedStep") and cline.startswith("fixedStep"):
@@ -68,9 +68,9 @@ while cline != '' or wpsline != '':
     npos = int(fields[2].split("=")[1])-1
     nstep = int(fields[3].split("=")[1])
     if (nchrom == chrom) and (nstep == step) and (npos == pos): 
-      if options.verbose: sys.stderr.write("Continued: %s %s\n"%(wpsline.rstrip(),cline.rstrip()))
+      if options.verbose: sys.stderr.write(f"Continued: {wpsline.rstrip()} {cline.rstrip()}s\n")
     else:
-      if options.verbose: sys.stderr.write("Both reset: %s %d %d vs %s %d %d\n"%(nchrom,npos,nstep,chrom,pos,step))
+      if options.verbose: sys.stderr.write(f"Both reset: {nchrom} {npos} {nstep} vs {chrom} {pos} {step}\n")
       # Make sure that we processed all positions in the last WIG region
       if (len(windowValues) == windowSize):
         posInWindow += 1
@@ -80,7 +80,7 @@ while cline != '' or wpsline != '':
           #ivalue = min(100.0,max(-100.0,(0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100))
           ivalue = (0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100
           ipos = pos-windowSize+posInWindow+1
-          sys.stdout.write("%s\t%d\t%.2f\t%.1f\t%.1f\t%.1f\n"%(chrom,ipos,ivalue,WPSval-windowMedian,WPSval,Cov))
+          sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.2f}\t{WPSval-windowMedian:.1f}\t{WPSval:.1f}\t{Cov:.1f}\n")
           # Increase position in window towards end of the list
           posInWindow += 1
       # Clean-up for next region
@@ -102,7 +102,7 @@ while cline != '' or wpsline != '':
     if (nchrom == chrom) and (nstep == step) and (npos == pos): 
       if options.verbose: sys.stderr.write("Continued [WPS]: %s %s\n"%(wpsline.rstrip(),cline.rstrip()))
     else:
-      if options.verbose: sys.stderr.write("WPS reset: %s %d %d vs %s %d %d\n"%(nchrom,npos,nstep,chrom,pos,step))
+      if options.verbose: sys.stderr.write(f"WPS reset: {nchrom} {npos} {nstep} vs {chrom} {pos} {step}\n")
       # Make sure that we processed all positions in the last WIG region
       if (len(windowValues) == windowSize):
         posInWindow += 1
@@ -112,7 +112,7 @@ while cline != '' or wpsline != '':
           #ivalue = min(100.0,max(-100.0,(0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100))
           ivalue = (0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100
           ipos = pos-windowSize+posInWindow+1
-          sys.stdout.write("%s\t%d\t%.2f\t%.1f\t%.1f\t%.1f\n"%(chrom,ipos,ivalue,WPSval-windowMedian,WPSval,Cov))
+          sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.2f}\t{WPSval-windowMedian:.1f}\t{WPSval:.1f}\t{Cov:.1f}\n")
           # Increase position in window towards end of the list
           posInWindow += 1
       # Clean-up for next region
@@ -131,11 +131,13 @@ while cline != '' or wpsline != '':
     npos = int(fields[2].split("=")[1])-1
     nstep = int(fields[3].split("=")[1])
     if (nchrom == chrom) and (nstep == step) and (npos == pos): 
-      if options.verbose: sys.stderr.write("Continued [Cov]: %s %s\n"%(wpsline.rstrip(),cline.rstrip()))
+      if options.verbose:
+        sys.stderr.write(f"Continued [Cov]: {wpsline.rstrip()} {cline.rstrip()}\n")
     else:
-      if options.verbose: sys.stderr.write("Coverage reset: %s %d %d vs %s %d %d\n"%(nchrom,npos,nstep,chrom,pos,step))
+      if options.verbose:
+        sys.stderr.write(f"Coverage reset: {nchrom} {npos} {nstep} vs {chrom} {pos} {step}\n")
       # Make sure that we processed all positions in the last WIG region
-      if (len(windowValues) == windowSize):
+      if len(windowValues) == windowSize:
         posInWindow += 1
         windowMedian = medianS(windowValuesSorted)
         while (posInWindow < windowSize):
@@ -143,7 +145,7 @@ while cline != '' or wpsline != '':
           #ivalue = min(100.0,max(-100.0,(0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100))
           ivalue = (0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100
           ipos = pos-windowSize+posInWindow+1
-          sys.stdout.write("%s\t%d\t%.2f\t%.1f\t%.1f\t%.1f\n"%(chrom,ipos,ivalue,WPSval-windowMedian,WPSval,Cov))
+          sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.2f}\t{WPSval-windowMedian:.1f}\t{WPSval:.1f}\t{Cov:.1f}\n")
           # Increase position in window towards end of the list
           posInWindow += 1
       # Clean-up for next region
@@ -175,7 +177,7 @@ while cline != '' or wpsline != '':
           #ivalue = min(100.0,max(-100.0,(0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100))
           ivalue = (0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100
           ipos = pos-windowSize+posInWindow
-          sys.stdout.write("%s\t%d\t%.2f\t%.1f\t%.1f\t%.1f\n"%(chrom,ipos,ivalue,WPSval-windowMedian,WPSval,Cov))
+          sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.2f}\t{WPSval-windowMedian:.1f}\t{WPSval:.1f}\t{Cov:.1f}\n")
           posInWindow += 1
         # Overstepped by 1, reset to center
         posInWindow -= 1
@@ -190,7 +192,7 @@ while cline != '' or wpsline != '':
       #ivalue = min(100.0,max(-100.0,(0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100))
       ivalue = (0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100
       ipos = pos-windowSize+posInWindow+1
-      sys.stdout.write("%s\t%d\t%.2f\t%.1f\t%.1f\t%.1f\n"%(chrom,ipos,ivalue,WPSval-windowMedian,WPSval,Cov))
+      sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.2f}\t{WPSval-windowMedian:.1f}\t{WPSval:.1f}\t{Cov:.1f}\n")
 
     cline = cov.readline()
     wpsline = wps.readline()
@@ -205,6 +207,6 @@ if (len(windowValues) == windowSize):
     #ivalue = min(100.0,max(-100.0,(0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100))
     ivalue = (0.0 if Cov == 0 else (WPSval-windowMedian)/float(Cov))*100
     ipos = pos-windowSize+posInWindow+1
-    sys.stdout.write("%s\t%d\t%.2f\t%.1f\t%.1f\t%.1f\n"%(chrom,ipos,ivalue,WPSval-windowMedian,WPSval,Cov))
+    sys.stdout.write(f"{chrom}\t{ipos}\t{ivalue:.2f}\t{WPSval-windowMedian:.1f}\t{WPSval:.1f}\t{Cov:.1f}\n")
     posInWindow += 1
 
