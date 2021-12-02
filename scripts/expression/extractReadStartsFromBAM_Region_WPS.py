@@ -249,7 +249,7 @@ def generate_region_file(bam_region, region, options):
     if cov_sites or options.empty:
         if region.strand == "-":
             wps_list = reversed(wps_list)
-        with gzopen(options.outfile.format(region.cid), "wt") as wps_handle:
+        with gzopen(options.outfile.replace('*', region.cid), "wt") as wps_handle:
             for line in wps_list:
                 print(*line, sep="\t", file=wps_handle)
 

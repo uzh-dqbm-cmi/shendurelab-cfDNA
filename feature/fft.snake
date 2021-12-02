@@ -11,7 +11,7 @@ rule wps:
         scripts/expression/extractReadStartsFromBAM_Region_WPS.py \
             --min_ins_size=120 --max_ins_size=180 \
             -i {input.anno} \
-            -o '{params.out_dir}/{wildcards.ref_id}_{}.tsv.gz' \
+            -o '{params.out_dir}/{wildcards.ref_id}_*.tsv.gz' \
             -j {threads} \
             -v {input.bam};
         cd {params.out_dir} && \
