@@ -149,7 +149,7 @@ def valid_regions(anno, bam, options):
             span_start = region_start - options.prot_radius - 1
             span_end = region_end + options.prot_radius + 1
             print(f'region for chromosome {chrom}: {span_start}:{span_end}')
-            region = Region(cid, chrom, region_start, span_start, '+')  # strand doesn't matter: not used so far
+            region = Region(cid, chrom, region_start, region_end, '+')  # strand doesn't matter: not used so far
             bam_fetch = bam.fetch(chrom, span_start, span_end)
             bam_region = pickleable_region(bam_fetch)
             yield region, bam_region
@@ -217,6 +217,7 @@ def inc_pr_at(pos_range, at, region_start, region_end):
 
 
 def get_reads_and_ranges(bam_region, cid, chrom, region_start, region_end, strand, options):
+    print(f'get_reads_and_ranges for {chrom} region {region_start}:{region_end} ...')
     pos_range = defaultdict(lambda: [0,0])
     filtered_reads = Intersecter()
     read_iterator = filter_reads(
@@ -247,6 +248,7 @@ def get_reads_and_ranges(bam_region, cid, chrom, region_start, region_end, stran
 
 
 def get_wps(filtered_reads, pos_range, cid, chrom, region_start, region_end, strand, options):
+    print(f'calculate WPS for {chrom} region {region_start}:{region_end} ...')
     cov_sites = 0
     wps_list = []
     for pos in range(region_start, region_end + 1):
