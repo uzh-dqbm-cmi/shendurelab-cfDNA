@@ -115,6 +115,7 @@ def get_arguments(arg_rules):
     options, args = parser.parse_args()
     options.prot_radius = int(options.protection / 2)
     options.input = options.input.strip("""\'""") if options.input else ''
+    options.genome_wide = not options.input
     options.outfile = options.outfile.strip("""\'""")
     bamfile = args[0].strip("""\'""")
     if not exists(bamfile):
@@ -138,18 +139,7 @@ def pickleable_region(bam_fetch):
 
 
 def valid_regions(anno, bam, options):
-    if anno:
-        for line in anno:
-            cid, chrom, start, end, strand = line.split()
-            region_start, region_end = int(start), int(end)
-            span_start = region_start - options.prot_radius - 1
-            span_end = region_end + options.prot_radius + 1
-            if (chrom in VALID_CHROMS) and (region_start >= 1):
-                region = Region(cid, chrom, int(start), int(end), strand)
-                bam_fetch = bam.fetch(chrom, span_start, span_end)
-                bam_region = pickleable_region(bam_fetch)
-                yield region, bam_region
-    else:  # genome wide: whole chromosomes
+    if options.genome_wide:   # whole chromosomes
         for i in range(bam.nreferences):
             chrom = bam.references[i]
             chrom_length = bam.lengths[i]
@@ -162,6 +152,17 @@ def valid_regions(anno, bam, options):
             bam_fetch = bam.fetch(chrom, span_start, span_end)
             bam_region = pickleable_region(bam_fetch)
             yield region, bam_region
+    else:  # annotation regions
+        for line in anno:
+            cid, chrom, start, end, strand = line.split()
+            region_start, region_end = int(start), int(end)
+            span_start = region_start - options.prot_radius - 1
+            span_end = region_end + options.prot_radius + 1
+            if (chrom in VALID_CHROMS) and (region_start >= 1):
+                region = Region(cid, chrom, int(start), int(end), strand)
+                bam_fetch = bam.fetch(chrom, span_start, span_end)
+                bam_region = pickleable_region(bam_fetch)
+                yield region, bam_region
 
 
 def filter_reads(bam_region, chrom, region_start, region_end, options):
@@ -267,9 +268,14 @@ def generate_region_file(bam_region, region, options):
     if cov_sites or options.empty:
         if region.strand == "-":
             wps_list = reversed(wps_list)
-        with gzopen(options.outfile.replace('*', region.cid), "wt") as wps_handle:
-            for line in wps_list:
-                print(*line, sep="\t", file=wps_handle)
+        if options.genome_wide:   # whole chromosomes, so all in the same file
+            with gzopen(options.outfile.replace('*', 'genome_wide'), "wt") as wps_handle:
+                for line in wps_list:
+                    print(*line, sep="\t", file=wps_handle)
+        else:  # separate file for every region
+            with gzopen(options.outfile.replace('*', region.cid), "wt") as wps_handle:
+                for line in wps_list:
+                    print(*line, sep="\t", file=wps_handle)
 
 
 if __name__ == "__main__":
