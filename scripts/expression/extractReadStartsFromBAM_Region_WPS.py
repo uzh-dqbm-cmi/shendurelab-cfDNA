@@ -179,7 +179,7 @@ def is_valid_paired(r, region_start, options):
         span_start = region_start - options.prot_radius - 1
         if r.is_read1 or (r.is_read2 and r.pnext+r.qlen < span_start):
             if r.isize != 0:
-                if (options.min_ins_size == None):
+                if options.min_ins_size is None:
                     return True
                 elif options.min_ins_size < abs(r.isize) < options.max_ins_size:
                     return True
@@ -187,7 +187,7 @@ def is_valid_paired(r, region_start, options):
 
 
 def is_valid_single(r, options):
-    if (options.min_ins_size == None):
+    if options.min_ins_size is None:
         return True
     elif options.min_ins_size < aln_length(r.cigar) < options.max_ins_size:
         return True
@@ -200,7 +200,7 @@ def as_merged(r, options):
 
 
 def as_trimmed(r, options):
-    if (options.trimmed or r.qname.startswith("T_")):
+    if options.trimmed or r.qname.startswith("T_"):
         return r.qlen <= options.length_sr - 10
     return False
 
