@@ -114,6 +114,7 @@ def get_arguments(arg_rules):
         parser.add_option(*rule_unnamed, **rule_named)
     options, args = parser.parse_args()
     options.prot_radius = int(options.protection / 2)
+    options.input = options.input.strip("""\'""") if options.input else ''
     options.outfile = options.outfile.strip("""\'""")
     bamfile = args[0].strip("""\'""")
     if not exists(bamfile):
