@@ -12,7 +12,10 @@ from bx.intervals.intersection import Intersecter, Interval
 from joblib import Parallel, delayed
 
 ARG_RULES = {
-    ("-i", "--input"): {"help": "Regions transcript file"},
+    ("-i", "--input"): {
+        "help": "Regions transcript file. Default (None): genome wide",
+        "default": None
+    },
     ("-o", "--outfile"): {"help": "Output file(s) prefix"},
     ("--chrom_prefix",): {"default": ""},
     ("-l", "--length_sr"): {
@@ -134,13 +137,27 @@ def pickleable_region(bam_fetch):
 
 
 def valid_regions(anno, bam, options):
-    for line in anno:
-        cid, chrom, start, end, strand = line.split()
-        region_start, region_end = int(start), int(end)
-        span_start = region_start - options.prot_radius - 1
-        span_end = region_end + options.prot_radius + 1
-        if (chrom in VALID_CHROMS) and (region_start >= 1):
-            region = Region(cid, chrom, int(start), int(end), strand)
+    if anno:
+        for line in anno:
+            cid, chrom, start, end, strand = line.split()
+            region_start, region_end = int(start), int(end)
+            span_start = region_start - options.prot_radius - 1
+            span_end = region_end + options.prot_radius + 1
+            if (chrom in VALID_CHROMS) and (region_start >= 1):
+                region = Region(cid, chrom, int(start), int(end), strand)
+                bam_fetch = bam.fetch(chrom, span_start, span_end)
+                bam_region = pickleable_region(bam_fetch)
+                yield region, bam_region
+    else:  # genome wide: whole chromosomes
+        for i in range(bam.nreferences):
+            chrom = bam.references[i]
+            chrom_length = bam.lengths[i]
+            cid = chrom + "_whole"
+            region_start, region_end = options.protection + 1,  chrom_length - options.protection - 1
+            span_start = region_start - options.prot_radius - 1
+            span_end = region_end + options.prot_radius + 1
+            print(f'region for chromosome {chrom}: {span_start}:{span_end}')
+            region = Region(cid, chrom, region_start, span_start, '+')  # strand doesn't matter: not used so far
             bam_fetch = bam.fetch(chrom, span_start, span_end)
             bam_region = pickleable_region(bam_fetch)
             yield region, bam_region
@@ -256,7 +273,8 @@ def generate_region_file(bam_region, region, options):
 
 if __name__ == "__main__":
     options, bamfile = get_arguments(ARG_RULES)
-    with Samfile(bamfile,check_sq = False) as bam, open(options.input) as anno:
+    with Samfile(bamfile, check_sq=False) as bam:
+        anno = open(options.input) if options.input else None
         Parallel(n_jobs=options.jobs)(
             delayed(generate_region_file)(bam_region, region, options)
             for region, bam_region in valid_regions(anno, bam, options)
