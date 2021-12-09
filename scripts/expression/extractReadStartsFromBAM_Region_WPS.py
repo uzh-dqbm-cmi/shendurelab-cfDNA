@@ -2,7 +2,8 @@
 """Original author: Martin Kircher / mkircher@uw.edu / *03.06.2014"""
 #from IPython import embed
 from sys import stderr
-from os.path import exists
+from os.path import exists, dirname
+from os import makedirs
 from gzip import open as gzopen
 from pysam import Samfile
 from random import random
@@ -269,13 +270,16 @@ def generate_region_file(bam_region, region, options):
         if region.strand == "-":
             wps_list = reversed(wps_list)
         if options.genome_wide:   # whole chromosomes, so all in the same file
-            with gzopen(options.outfile.replace('*', 'genome_wide'), "wt") as wps_handle:
-                for line in wps_list:
-                    print(*line, sep="\t", file=wps_handle)
+            gz_filename = options.outfile.replace('*', 'genome_wide')
         else:  # separate file for every region
-            with gzopen(options.outfile.replace('*', region.cid), "wt") as wps_handle:
-                for line in wps_list:
-                    print(*line, sep="\t", file=wps_handle)
+            gz_filename = options.outfile.replace('*', region.cid)
+        print(f'Saving in file: {gz_filename} ...')
+        gz_dir = dirname(gz_filename)
+        if not exists(gz_dir):
+            makedirs(gz_dir, exist_ok=True)
+        with gzopen(gz_filename, "wt") as wps_handle:
+            for line in wps_list:
+                print(*line, sep="\t", file=wps_handle)
 
 
 if __name__ == "__main__":
